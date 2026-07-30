@@ -131,6 +131,33 @@ d('Testcontainers: DB-backed routes via app.inject', () => {
     await app.close();
   });
 
+  it('GET /repos/:id/pulls sums every run cost per PR, and stays null when none is priced', async () => {
+    const config = loadConfig({ ...process.env, NODE_ENV: 'test' } as NodeJS.ProcessEnv);
+    const app = await buildApp({
+      config,
+      db: pg.handle.db,
+      overrides: { git: new MockGitClient(), github: new MockGitHubClient() },
+    });
+    const repoId = (await app.inject({ method: 'GET', url: '/repos' })).json()[0]!.id;
+    const before = (await app.inject({ method: 'GET', url: `/repos/${repoId}/pulls` })).json();
+    const pr = before[0] as { id: string };
+    // A PR nobody has reviewed has no cost at all — null, never 0.
+    expect(before[0].cost_usd).toBeNull();
+
+    const [ws] = await pg.handle.db.select().from(t.workspaces);
+    await pg.handle.db.insert(t.agentRuns).values([
+      // The column is the PR's TOTAL, not its latest run.
+      { workspaceId: ws!.id, prId: pr.id, status: 'done', costUsd: 0.01 },
+      { workspaceId: ws!.id, prId: pr.id, status: 'done', costUsd: 0.004 },
+      // An unpriced run must not drag the total to null, nor count as 0.
+      { workspaceId: ws!.id, prId: pr.id, status: 'failed', costUsd: null },
+    ]);
+
+    const after = (await app.inject({ method: 'GET', url: `/repos/${repoId}/pulls` })).json();
+    expect(after[0].cost_usd).toBeCloseTo(0.014, 6);
+    await app.close();
+  });
+
   it('POST /repos/:id/poll syncs PR list and does NOT trigger a review', async () => {
     const config = loadConfig({ ...process.env, NODE_ENV: 'test' } as NodeJS.ProcessEnv);
     const app = await buildApp({
