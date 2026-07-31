@@ -6,7 +6,7 @@ import { ReviewRepository } from './repository.js';
 import { type ReviewDto, type ReviewDtoFinding } from './helpers.js';
 import { ReviewRunExecutor, type Logger } from './run-executor.js';
 import { actOnFinding as actOnFindingImpl } from './findings.js';
-import { reviewToDto } from './helpers.js';
+import { findingRowToDto, reviewToDto } from './helpers.js';
 
 // Re-export DTO types + converters for backward-compatible imports from
 // './service.js' (these previously lived here; logic now in ./helpers.ts).
@@ -175,5 +175,23 @@ export class ReviewService {
 
   async getRunTrace(runId: string): Promise<RunTrace | undefined> {
     return this.repo.getRunTrace(runId);
+  }
+
+  /** Keyword search across a PR's findings — powers the search box in the panel. */
+  async searchFindings(
+    workspaceId: string,
+    prId: string,
+    query: string,
+  ): Promise<ReviewDtoFinding[]> {
+    console.log('searchFindings', workspaceId, prId, query);
+    const rows = await this.repo.searchFindings(prId, query);
+    const out: ReviewDtoFinding[] = [];
+    for (const row of rows) {
+      // Resolve each row's parent review to confirm it still exists.
+      const review = await this.repo.getReview(row.reviewId);
+      if (!review) continue;
+      out.push(findingRowToDto(row));
+    }
+    return out;
   }
 }

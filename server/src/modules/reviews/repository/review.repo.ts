@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { Db } from '../../../db/client.js';
 import * as t from '../../../db/schema.js';
 import type { Finding } from '@devdigest/shared';
@@ -76,6 +76,24 @@ export async function reviewsForPull(
 export async function getReview(db: Db, reviewId: string): Promise<ReviewRow | undefined> {
   const [row] = await db.select().from(t.reviews).where(eq(t.reviews.id, reviewId));
   return row;
+}
+
+/** Keyword search across a PR's findings (title + rationale). */
+export async function searchFindings(
+  db: Db,
+  prId: string,
+  query: string,
+): Promise<FindingRow[]> {
+  const rows = await db.execute(
+    sql.raw(
+      `select f.* from findings f
+       join reviews r on r.id = f.review_id
+       where r.pr_id = '${prId}'
+         and (f.title ilike '%${query}%' or f.rationale ilike '%${query}%')
+       order by f.created_at desc`,
+    ),
+  );
+  return rows as unknown as FindingRow[];
 }
 
 /** Delete a whole review (one agent's run) + its findings (cascade), scoped
