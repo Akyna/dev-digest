@@ -30,6 +30,7 @@ export function ReviewRunAccordion({
   repoFullName,
   headSha,
   targetRunId = null,
+  targetFindingId = null,
   targetNonce = 0,
 }: {
   review: ReviewRecord;
@@ -40,6 +41,8 @@ export function ReviewRunAccordion({
   /** When this matches review.run_id, the accordion opens and scrolls into view
    *  (driven from the Timeline: clicking an agent name navigates here). */
   targetRunId?: string | null;
+  /** When set (and targetRunId matches this review), that finding expands + scrolls into view. */
+  targetFindingId?: string | null;
   targetNonce?: number;
 }) {
   const [open, setOpen] = React.useState(defaultOpen);
@@ -152,6 +155,8 @@ export function ReviewRunAccordion({
             prId={prId}
             repoFullName={repoFullName}
             headSha={headSha}
+            targetFindingId={review.run_id === targetRunId ? targetFindingId : null}
+            targetNonce={targetNonce}
           />
         </div>
       )}

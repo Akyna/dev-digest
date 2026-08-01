@@ -17,11 +17,16 @@ export function FindingsPanel({
   prId,
   repoFullName,
   headSha,
+  targetFindingId = null,
+  targetNonce = 0,
 }: {
   findings: FindingRecord[];
   prId: string;
   repoFullName?: string | null;
   headSha?: string | null;
+  /** When set, that finding expands + scrolls into view (driven from the Timeline or a PR-list deep link). */
+  targetFindingId?: string | null;
+  targetNonce?: number;
 }) {
   const t = useTranslations("prReview");
   const action = useFindingAction();
@@ -67,6 +72,8 @@ export function FindingsPanel({
               pending={action.isPending}
               repoFullName={repoFullName}
               headSha={headSha}
+              isTarget={f.id === targetFindingId}
+              targetNonce={targetNonce}
               onAction={(act) => action.mutate({ findingId: f.id, action: act, prId })}
             />
           ))

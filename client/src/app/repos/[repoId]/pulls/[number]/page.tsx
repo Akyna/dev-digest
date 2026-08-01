@@ -57,7 +57,8 @@ export default function PRDetailPage() {
     if (prId) qc.invalidateQueries({ queryKey: ["pr-runs", prId] });
   };
 
-  const tab = search.get("tab") ?? "overview";
+  const findingId = search.get("findingId");
+  const tab = search.get("tab") ?? (findingId ? "findings" : "overview");
   const traceRunId = search.get("trace");
   const setParam = (key: string, val: string | null) => {
     const sp = new URLSearchParams(search.toString());
@@ -147,6 +148,7 @@ export default function PRDetailPage() {
             prCommits={pr.commits}
             repoFullName={repoFullName}
             headSha={pr.head_sha}
+            deepLinkFindingId={findingId}
             cancelMutation={cancel}
             onOpenTrace={(id) => setParam("trace", id)}
             onDelete={(id) => {

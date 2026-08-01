@@ -31,6 +31,8 @@ export function FindingCard({
   pending,
   repoFullName,
   headSha,
+  isTarget,
+  targetNonce,
 }: {
   f: FindingRecord;
   focused?: boolean;
@@ -39,9 +41,21 @@ export function FindingCard({
   pending?: boolean;
   repoFullName?: string | null;
   headSha?: string | null;
+  /** When true, this card expands + scrolls into view (a deep link or a
+   *  Timeline findings-popover click landed on it). */
+  isTarget?: boolean;
+  targetNonce?: number;
 }) {
   const t = useTranslations("prReview");
   const [expanded, setExpanded] = React.useState(defaultExpanded ?? false);
+  const rootRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    if (!isTarget) return;
+    setExpanded(true);
+    rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTarget, targetNonce]);
   const sevColor = SEV_COLOR[f.severity] ?? SEV_COLOR_FALLBACK;
   const fileHref =
     repoFullName && headSha
@@ -52,7 +66,7 @@ export function FindingCard({
   const muted = accepted || dismissed;
 
   return (
-    <div data-finding-id={f.id} style={s.card(!!focused, sevColor, muted)}>
+    <div ref={rootRef} data-finding-id={f.id} style={s.card(!!focused || !!isTarget, sevColor, muted)}>
       <div onClick={() => setExpanded((e) => !e)} style={s.header}>
         <div style={s.badgeWrap}>
           <SeverityBadge severity={f.severity as Severity} compact />

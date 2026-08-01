@@ -58,3 +58,19 @@ describe("FindingCard (smoke, both themes)", () => {
     expect(onAction).toHaveBeenCalledWith("dismiss");
   });
 });
+
+describe("FindingCard — deep-link target", () => {
+  it("expands + scrolls into view when isTarget flips on", () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    renderWithIntl(<FindingCard f={FINDING} isTarget targetNonce={1} onAction={() => {}} />);
+    // Collapsed by default (no defaultExpanded), but isTarget forces it open.
+    expect(screen.getByText("Move the key to an environment variable.")).toBeInTheDocument();
+    expect(scrollIntoView).toHaveBeenCalled();
+  });
+
+  it("does not expand when isTarget is false", () => {
+    renderWithIntl(<FindingCard f={FINDING} isTarget={false} onAction={() => {}} />);
+    expect(screen.queryByText("Move the key to an environment variable.")).not.toBeInTheDocument();
+  });
+});

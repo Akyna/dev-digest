@@ -1,4 +1,7 @@
 {
+  "findingsPopover": {
+    "count": "{count} FINDINGS"
+  },
   "finding": {
     "accepted": "accepted",
     "dismissed": "dismissed",
@@ -91,6 +94,7 @@
       "author": "Author",
       "size": "Size",
       "score": "Score",
+      "findings": "Findings",
       "status": "Status",
       "cost": "Cost",
       "updated": "Updated"

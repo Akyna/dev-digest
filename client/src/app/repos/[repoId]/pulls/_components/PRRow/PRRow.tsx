@@ -10,6 +10,7 @@ import { formatCost } from "@/lib/format-cost";
 import { SIZE_COLOR, STATUS_META } from "../../constants";
 import { relativeTime, sizeOf } from "../../helpers";
 import { s } from "../../styles";
+import { FindingsHoverPopover } from "../FindingsHoverPopover";
 
 export function PRRow({ pr, repoId }: { pr: PrMeta; repoId: string }) {
   const t = useTranslations("prReview");
@@ -52,6 +53,16 @@ export function PRRow({ pr, repoId }: { pr: PrMeta; repoId: string }) {
           <CircularScore score={pr.score!} size={34} stroke={3} />
         ) : (
           <span style={s.muted}>—</span>
+        )}
+      </div>
+      <div style={s.findingsCell}>
+        {!reviewed ? (
+          <span style={s.muted}>—</span>
+        ) : (
+          <FindingsHoverPopover
+            findings={pr.top_findings ?? []}
+            onFindingClick={(id) => router.push(`/repos/${repoId}/pulls/${pr.number}?tab=findings&findingId=${id}`)}
+          />
         )}
       </div>
       <div>

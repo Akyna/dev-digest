@@ -21,6 +21,8 @@ interface FindingsTabProps {
   /** owner/repo + head sha — used to deep-link a finding's file:line to GitHub. */
   repoFullName?: string | null;
   headSha?: string | null;
+  /** A finding id from the URL (`?findingId=`) to auto scroll-to + expand once runs load. */
+  deepLinkFindingId?: string | null;
   onOpenTrace: (id: string) => void;
   onDelete: (id: string) => void;
   onRunDone: () => void;
@@ -37,6 +39,7 @@ export function FindingsTab({
   cancelMutation,
   repoFullName,
   headSha,
+  deepLinkFindingId,
   onOpenTrace,
   onDelete,
   onRunDone,
@@ -63,13 +66,26 @@ export function FindingsTab({
     [onDelete],
   );
 
-  // Timeline → Review-runs navigation: clicking an agent name in the timeline
-  // opens + scrolls to that run's accordion below. The nonce re-triggers the
-  // scroll even when the same run is clicked twice.
-  const [target, setTarget] = React.useState<{ runId: string; n: number } | null>(null);
-  const handleGoToReview = useCallback((runId: string) => {
-    setTarget((p) => ({ runId, n: (p?.n ?? 0) + 1 }));
+  // Timeline → Review-runs navigation: clicking an agent name (or a finding
+  // inside that run's findings popover) in the timeline opens + scrolls to
+  // that run's accordion below, optionally expanding one specific finding.
+  // The nonce re-triggers the scroll even when the same target is clicked twice.
+  const [target, setTarget] = React.useState<{ runId: string; findingId?: string; n: number } | null>(null);
+  const handleGoToReview = useCallback((runId: string, findingId?: string) => {
+    setTarget((p) => ({ runId, findingId, n: (p?.n ?? 0) + 1 }));
   }, []);
+
+  // Deep-link from the PR list's findings popover (`?findingId=`): once runs
+  // are loaded, resolve which review owns that finding and jump to it — only
+  // once per distinct id, so switching tabs away and back doesn't re-scroll.
+  const consumedDeepLinkRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!deepLinkFindingId || consumedDeepLinkRef.current === deepLinkFindingId) return;
+    const owner = runs.find((r) => r.findings.some((f) => f.id === deepLinkFindingId));
+    if (!owner?.run_id) return;
+    consumedDeepLinkRef.current = deepLinkFindingId;
+    handleGoToReview(owner.run_id, deepLinkFindingId);
+  }, [deepLinkFindingId, runs, handleGoToReview]);
 
   return (
     <section>
@@ -130,6 +146,7 @@ export function FindingsTab({
           </SectionLabel>
           <RunHistory
             runs={prRuns ?? []}
+            reviews={runs}
             commits={prCommits}
             onOpenTrace={handleOpenTrace}
             onGoToReview={handleGoToReview}
@@ -163,6 +180,7 @@ export function FindingsTab({
             repoFullName={repoFullName}
             headSha={headSha}
             targetRunId={target?.runId ?? null}
+            targetFindingId={target?.findingId ?? null}
             targetNonce={target?.n ?? 0}
           />
         ))

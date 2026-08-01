@@ -6,7 +6,13 @@
  * + age, so it gets unit coverage independent of the route's queries.
  */
 import { describe, it, expect } from 'vitest';
-import { deriveReviewStatus, rollupSeverities, STALE_DAYS } from '../src/modules/pulls/status.js';
+import {
+  deriveReviewStatus,
+  rollupSeverities,
+  sortFindingsForSummary,
+  STALE_DAYS,
+  type FindingSummaryRow,
+} from '../src/modules/pulls/status.js';
 
 const DAY = 86_400_000;
 const now = Date.UTC(2026, 5, 11);
@@ -64,5 +70,51 @@ describe('rollupSeverities', () => {
 
   it('is all-zero for no findings', () => {
     expect(rollupSeverities([])).toEqual({ critical: 0, warning: 0, suggestion: 0 });
+  });
+});
+
+function row(o: Partial<FindingSummaryRow>): FindingSummaryRow {
+  return {
+    id: 'f1',
+    file: 'src/config.ts',
+    startLine: 12,
+    endLine: 12,
+    severity: 'CRITICAL',
+    category: 'security',
+    title: 'Hardcoded secret',
+    rationale: 'A secret is committed.',
+    suggestion: null,
+    confidence: 0.9,
+    kind: 'finding',
+    ...o,
+  };
+}
+
+describe('sortFindingsForSummary', () => {
+  it('orders CRITICAL → WARNING → SUGGESTION, ignoring input order', () => {
+    const out = sortFindingsForSummary([
+      row({ id: 'sugg', severity: 'SUGGESTION' }),
+      row({ id: 'crit', severity: 'CRITICAL' }),
+      row({ id: 'warn', severity: 'WARNING' }),
+    ]);
+    expect(out.map((f) => f.id)).toEqual(['crit', 'warn', 'sugg']);
+  });
+
+  it('breaks ties within a severity by confidence, descending', () => {
+    const out = sortFindingsForSummary([
+      row({ id: 'low', severity: 'WARNING', confidence: 0.6 }),
+      row({ id: 'high', severity: 'WARNING', confidence: 0.9 }),
+    ]);
+    expect(out.map((f) => f.id)).toEqual(['high', 'low']);
+  });
+
+  it('maps DB column names to the Finding contract shape (start_line/end_line, nullable suggestion)', () => {
+    const [out] = sortFindingsForSummary([row({ id: 'f1', startLine: 10, endLine: 14, suggestion: 'Use env vars.' })]);
+    expect(out).toMatchObject({
+      id: 'f1',
+      start_line: 10,
+      end_line: 14,
+      suggestion: 'Use env vars.',
+    });
   });
 });

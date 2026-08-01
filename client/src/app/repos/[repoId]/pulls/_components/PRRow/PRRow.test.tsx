@@ -4,12 +4,13 @@
  * and a fake zero there is worse than an honest blank.
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import type { PrMeta } from "@devdigest/shared";
+import type { PrMeta, Finding } from "@devdigest/shared";
 import messages from "../../../../../../../messages/en/prReview.json";
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: () => {} }) }));
+const push = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 import { PRRow } from "./PRRow";
 
@@ -53,7 +54,44 @@ describe("PRRow — cost cell", () => {
   it("renders an em-dash when no run on the PR has a known price", () => {
     renderRow(pr({ cost_usd: null, score: null }));
     expect(screen.queryByText(/\$/)).not.toBeInTheDocument();
-    // Both the score ring and the cost cell fall back to the same em-dash.
-    expect(screen.getAllByText("—")).toHaveLength(2);
+    // The score ring, findings cell, and cost cell all fall back to the same em-dash.
+    expect(screen.getAllByText("—")).toHaveLength(3);
+  });
+});
+
+function finding(o: Partial<Finding>): Finding {
+  return {
+    id: "f1",
+    severity: "CRITICAL",
+    category: "security",
+    title: "Hardcoded Stripe secret key",
+    file: "src/config.ts",
+    start_line: 12,
+    end_line: 12,
+    rationale: "A live Stripe key is committed in source.",
+    suggestion: null,
+    confidence: 0.98,
+    kind: "finding",
+    ...o,
+  };
+}
+
+describe("PRRow — findings cell", () => {
+  afterEach(() => push.mockClear());
+
+  it("renders an em-dash when the PR was never reviewed", () => {
+    renderRow(pr({ score: null, top_findings: null }));
+    expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+  });
+
+  it("hovering the findings popover and clicking a finding navigates to the PR detail with ?tab=findings&findingId=", () => {
+    renderRow(pr({ score: 61, top_findings: [finding({ id: "f42" })] }));
+    const chip = screen.getByRole("button");
+    fireEvent.mouseEnter(chip.parentElement!);
+    fireEvent.click(screen.getByText("Hardcoded Stripe secret key"));
+    // Exactly once, and with the deep-link URL — proves the popover stops the
+    // click from also bubbling to the row's own "navigate to the PR" handler.
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith("/repos/repo-1/pulls/482?tab=findings&findingId=f42");
   });
 });
