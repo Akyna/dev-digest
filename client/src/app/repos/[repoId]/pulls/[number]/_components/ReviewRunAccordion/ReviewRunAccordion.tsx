@@ -50,10 +50,17 @@ export function ReviewRunAccordion({
   React.useEffect(() => {
     if (review.run_id && review.run_id === targetRunId) {
       setOpen(true);
-      rootRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      // When a specific finding is targeted, FindingCard owns the scroll (it
+      // centers on the finding itself, once expanded). Scrolling the run
+      // header here too would race two competing smooth-scrolls against the
+      // same viewport, landing on an unpredictable final position depending
+      // on which animation happened to finish last.
+      if (!targetFindingId) {
+        rootRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetRunId, targetNonce, review.run_id]);
+  }, [targetRunId, targetFindingId, targetNonce, review.run_id]);
   const del = useDeleteReview(prId);
   const findings = review.findings;
   const blockers = findings.filter((f) => f.severity === "CRITICAL" && !f.dismissed_at).length;

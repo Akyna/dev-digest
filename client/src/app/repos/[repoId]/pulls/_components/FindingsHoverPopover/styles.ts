@@ -17,9 +17,13 @@ export const s = {
     gap: 3,
     padding: "2px 5px",
     borderRadius: 5,
-    border: "1px solid transparent",
-    background: active ? "var(--bg-hover)" : "transparent",
+    // Longhand only — mixing the `border` shorthand with `borderColor` here
+    // triggers the same React "conflicting property" warning as FindingCard's
+    // border (see its styles.ts for the full explanation).
+    borderWidth: 1,
+    borderStyle: "solid",
     borderColor: active ? color : "transparent",
+    background: active ? "var(--bg-hover)" : "transparent",
     color,
     font: "inherit",
     fontSize: 12.5,

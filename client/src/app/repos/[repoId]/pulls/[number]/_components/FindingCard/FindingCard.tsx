@@ -51,11 +51,19 @@ export function FindingCard({
   const rootRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
-    if (!isTarget) return;
-    setExpanded(true);
-    rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (isTarget) setExpanded(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTarget, targetNonce]);
+
+  React.useEffect(() => {
+    // Scroll only once `expanded` has actually committed: doing it in the
+    // same effect as `setExpanded(true)` would measure the still-collapsed
+    // card (the state update hasn't re-rendered yet), landing block:"center"
+    // on the wrong height and leaving the title scrolled above the top edge.
+    if (!isTarget || !expanded) return;
+    rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTarget, expanded, targetNonce]);
   const sevColor = SEV_COLOR[f.severity] ?? SEV_COLOR_FALLBACK;
   const fileHref =
     repoFullName && headSha
