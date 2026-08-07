@@ -166,6 +166,9 @@ New arrays, objects, and functions created inline in JSX props break `React.memo
 
 ## Code Organization (MEDIUM)
 
+> For folder/file placement rules (where components, constants, utils, and
+> business logic should live), see [react-architecture](../react-architecture/SKILL.md).
+
 ### Feature-Based Structure
 - Colocate component + hook + helpers + tests per feature
 - Shared utilities go in `utils/` or `components/ui/`
