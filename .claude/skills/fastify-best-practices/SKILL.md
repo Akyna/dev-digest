@@ -68,6 +68,12 @@ Read individual rule files for detailed explanations and code examples:
 
 ## Core Principles
 
+> This skill covers how to write a route, plugin, or hook. For **which layer
+> the code belongs in** — why `routes.ts` must not build SQL or resolve
+> adapters, and what a service vs. repository owns in `server/src/modules/` —
+> see [onion-architecture](../onion-architecture/SKILL.md).
+
+
 - **Encapsulation**: Fastify's plugin system provides automatic encapsulation
 - **Schema-first**: Define schemas for validation and serialization
 - **Performance**: Fastify is optimized for speed; use its features correctly

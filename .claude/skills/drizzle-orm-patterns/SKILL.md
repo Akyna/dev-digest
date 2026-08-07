@@ -10,6 +10,12 @@ allowed-tools: Read, Write, Edit, Bash, Grep, Glob
 
 Expert guide for building type-safe database applications with Drizzle ORM. Covers schema definition, relations, queries, transactions, and migrations for all supported databases.
 
+> This skill covers how to *write* a query. **Where it may live** is a
+> separate rule: in this repo every Drizzle call belongs in a module's
+> `repository.ts`, `$inferSelect` row types stop there, and the service — not
+> the route — owns the transaction boundary. See
+> [onion-architecture](../onion-architecture/SKILL.md).
+
 ## When to Use
 
 - Defining database schemas with tables, columns, and constraints
