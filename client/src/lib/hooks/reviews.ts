@@ -160,6 +160,29 @@ export function useFindingAction() {
   });
 }
 
+// ---- Keyword search across a PR's findings ----
+/** Live search-as-you-type over a PR's findings (title + rationale). */
+export function useFindingsSearch(prId: string | null | undefined, query: string) {
+  const [results, setResults] = React.useState<ReviewRecord["findings"]>([]);
+  const [loading, setLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!prId || query.length === 0) {
+      setResults([]);
+      return;
+    }
+    setLoading(true);
+    fetch(`${API_BASE}/pulls/${prId}/findings/search?q=${query}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setResults(data);
+        setLoading(false);
+      });
+  }, [prId, query]);
+
+  return { results, loading };
+}
+
 /**
  * Subscribe to a run's SSE event stream. Returns the accumulated RunEvents and a
  * `running` flag (true until the stream closes). Live status for the

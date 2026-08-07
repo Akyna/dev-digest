@@ -68,6 +68,11 @@ export class ReviewRepository {
     return reviewRepo.getReview(this.db, reviewId);
   }
 
+  /** Keyword search across a PR's findings (title + rationale). */
+  searchFindings(prId: string, query: string): Promise<FindingRow[]> {
+    return reviewRepo.searchFindings(this.db, prId, query);
+  }
+
   /** In-flight runs for a PR (status='running') — the server-side source of
    *  truth for "which agents are running now". Joined with the agent name. */
   activeRunsForPull(

@@ -7,9 +7,9 @@ import { useTranslations } from "next-intl";
 import { Toggle, EmptyState } from "@devdigest/ui";
 import type { FindingRecord } from "@devdigest/shared";
 import { FindingCard } from "../FindingCard";
-import { useFindingAction } from "../../../../../../../lib/hooks/reviews";
+import { useFindingAction, useFindingsSearch } from "../../../../../../../lib/hooks/reviews";
 import { KEY_TO_ACTION } from "./constants";
-import { visibleFindings } from "./helpers";
+import { highlightMatch, visibleFindings } from "./helpers";
 import { s } from "./styles";
 
 export function FindingsPanel({
@@ -32,6 +32,8 @@ export function FindingsPanel({
   const action = useFindingAction();
   const [hideLow, setHideLow] = React.useState(false);
   const [focusIdx, setFocusIdx] = React.useState(0);
+  const [search, setSearch] = React.useState("");
+  const { results: searchResults } = useFindingsSearch(prId, search);
 
   const shown = React.useMemo(() => visibleFindings(findings, hideLow), [findings, hideLow]);
 
@@ -53,11 +55,28 @@ export function FindingsPanel({
   return (
     <div>
       <div style={s.toolbar}>
+        <input
+          type="text"
+          placeholder={t("panel.searchPlaceholder")}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
         <div style={s.toggleGroup}>
           {t("panel.hideLowConfidence")}
           <Toggle on={hideLow} onChange={setHideLow} size={16} />
         </div>
       </div>
+
+      {search.length > 0 && (
+        <div style={s.list}>
+          {searchResults.map((f) => (
+            <div
+              key={f.id}
+              dangerouslySetInnerHTML={{ __html: highlightMatch(f.title, search) }}
+            />
+          ))}
+        </div>
+      )}
 
       <div style={s.list}>
         {shown.length === 0 ? (

@@ -9,3 +9,10 @@ export function visibleFindings(findings: FindingRecord[], hideLow: boolean): Fi
     (a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9),
   );
 }
+
+/** Wrap every match of `query` in `text` with a <mark> tag for highlighting. */
+export function highlightMatch(text: string, query: string): string {
+  if (!query) return text;
+  const re = new RegExp(`(${query})`, "gi");
+  return text.replace(re, "<mark>$1</mark>");
+}

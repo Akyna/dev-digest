@@ -6,6 +6,7 @@ import messages from "../../../../../../../../messages/en/prReview.json";
 
 vi.mock("../../../../../../../lib/hooks/reviews", () => ({
   useFindingAction: () => ({ mutate: vi.fn(), isPending: false }),
+  useFindingsSearch: () => ({ results: [], loading: false }),
 }));
 
 import { FindingsPanel } from "./FindingsPanel";

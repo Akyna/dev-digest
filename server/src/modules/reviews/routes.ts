@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import { RunRequest } from '@devdigest/shared';
 import type { RunEvent } from '@devdigest/shared';
 import { getContext } from '../_shared/context.js';
@@ -130,6 +131,16 @@ export default async function reviewsRoutes(appBase: FastifyInstance) {
     const { workspaceId } = await getContext(container, req);
     return service.reviewsForPull(workspaceId, req.params.id);
   });
+
+  // ---- Keyword search across a PR's findings -------------------------------
+  app.get(
+    '/pulls/:id/findings/search',
+    { schema: { params: IdParams, querystring: z.object({ q: z.string().min(1) }) } },
+    async (req) => {
+      const { workspaceId } = await getContext(container, req);
+      return service.searchFindings(workspaceId, req.params.id, req.query.q);
+    },
+  );
 
   // ---- Delete a whole review run (one agent's pass) + its findings --------
   app.delete('/reviews/:id', { schema: { params: IdParams } }, async (req) => {
