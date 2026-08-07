@@ -6,9 +6,11 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon, Avatar, Badge, CircularScore } from "@devdigest/ui";
 import type { PrMeta } from "@/lib/types";
+import { formatCost } from "@/lib/format-cost";
 import { SIZE_COLOR, STATUS_META } from "../../constants";
 import { relativeTime, sizeOf } from "../../helpers";
 import { s } from "../../styles";
+import { FindingsHoverPopover } from "../FindingsHoverPopover";
 
 export function PRRow({ pr, repoId }: { pr: PrMeta; repoId: string }) {
   const t = useTranslations("prReview");
@@ -53,10 +55,26 @@ export function PRRow({ pr, repoId }: { pr: PrMeta; repoId: string }) {
           <span style={s.muted}>—</span>
         )}
       </div>
+      <div style={s.findingsCell}>
+        {!reviewed ? (
+          <span style={s.muted}>—</span>
+        ) : (
+          <FindingsHoverPopover
+            findings={pr.top_findings ?? []}
+            onFindingClick={(id) => router.push(`/repos/${repoId}/pulls/${pr.number}?tab=findings&findingId=${id}`)}
+          />
+        )}
+      </div>
       <div>
         <Badge dot color={st.c} bg="transparent">
           {t(`list.status.${st.labelKey}`)}
         </Badge>
+      </div>
+      <div
+        className="mono"
+        style={pr.cost_usd == null ? { ...s.costCell, ...s.muted } : s.costCell}
+      >
+        {formatCost(pr.cost_usd)}
       </div>
       <div style={s.updatedCell}>{relativeTime(pr.updated_at)}</div>
     </div>

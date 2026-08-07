@@ -3,7 +3,9 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { Badge, Icon, CircularScore, type IconName } from "@devdigest/ui";
-import type { RunSummary, PrCommit } from "@devdigest/shared";
+import type { RunSummary, PrCommit, ReviewRecord } from "@devdigest/shared";
+import { formatCost } from "@/lib/format-cost";
+import { FindingsHoverPopover } from "../../../_components/FindingsHoverPopover";
 
 /**
  * PR timeline — every agent run interleaved with the PR's commits, newest-first
@@ -86,20 +88,29 @@ function tsOf(s: string | null | undefined): number {
 
 export function RunHistory({
   runs,
+  reviews = [],
   commits = [],
   onOpenTrace,
   onGoToReview,
   onDelete,
 }: {
   runs: RunSummary[];
+  /** Full reviews (with findings) — matched to a run by run_id for the findings popover. */
+  reviews?: ReviewRecord[];
   commits?: PrCommit[];
   /** Open the trace + log drawer for a run (the logs icon). */
   onOpenTrace: (runId: string) => void;
-  /** Jump to this run's inline review accordion below (clicking the agent name). */
-  onGoToReview?: (runId: string) => void;
+  /** Jump to this run's inline review accordion below (clicking the agent name,
+   *  or a finding inside its findings popover — which also expands that finding). */
+  onGoToReview?: (runId: string, findingId?: string) => void;
   onDelete?: (runId: string) => void;
 }) {
   const t = useTranslations("prReview");
+  const reviewByRunId = React.useMemo(() => {
+    const m = new Map<string, ReviewRecord>();
+    for (const rv of reviews) if (rv.run_id) m.set(rv.run_id, rv);
+    return m;
+  }, [reviews]);
   if (runs.length === 0 && commits.length === 0) return null;
 
   const items: TimelineItem[] = [
@@ -149,6 +160,7 @@ export function RunHistory({
         const r = item.run;
         const o = outcomeOf(r);
         const settled = r.status === "done";
+        const tok = (r.tokens_in ?? 0) + (r.tokens_out ?? 0);
         return (
           <div key={`run:${r.run_id}`} style={rowStyle}>
             <Badge color={o.color} bg={o.bg} icon={o.icon}>
@@ -189,14 +201,31 @@ export function RunHistory({
                 </div>
               )}
               {settled && (
-                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                  {t("runStatus.findings", { count: r.findings_count ?? 0 })}
+                <div style={{ fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 4 }}>
+                  {(() => {
+                    const findings = reviewByRunId.get(r.run_id)?.findings ?? [];
+                    return findings.length > 0 ? (
+                      <FindingsHoverPopover
+                        findings={findings}
+                        onFindingClick={(id) => onGoToReview?.(r.run_id, id)}
+                      />
+                    ) : (
+                      <span>{t("runStatus.findings", { count: r.findings_count ?? 0 })}</span>
+                    );
+                  })()}
                   {(r.blockers ?? 0) > 0 ? t("runStatus.blockers", { count: r.blockers ?? 0 }) : ""}
                 </div>
               )}
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, fontSize: 11, color: "var(--text-muted)", flexShrink: 0 }}>
               {r.ran_at && <span>{new Date(r.ran_at).toLocaleTimeString()}</span>}
+              {(tok > 0 || r.cost_usd != null) && (
+                <span className="mono">
+                  {tok > 0 && `${tok.toLocaleString()} tok`}
+                  {tok > 0 && r.cost_usd != null && " · "}
+                  {r.cost_usd != null && formatCost(r.cost_usd)}
+                </span>
+              )}
             </div>
             <button
               type="button"

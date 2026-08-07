@@ -1,4 +1,4 @@
-import type { PrStatus } from '@devdigest/shared';
+import type { PrStatus, Finding } from '@devdigest/shared';
 
 /**
  * PR-list rollup helpers (pure — no DB / `this`, so they unit-test cleanly).
@@ -28,6 +28,48 @@ export function rollupSeverities(rows: { severity: string }[]): SeverityCounts {
     else if (r.severity === 'SUGGESTION') c.suggestion += 1;
   }
   return c;
+}
+
+const SEVERITY_RANK: Record<string, number> = { CRITICAL: 0, WARNING: 1, SUGGESTION: 2 };
+
+export interface FindingSummaryRow {
+  id: string;
+  file: string;
+  startLine: number;
+  endLine: number;
+  severity: string;
+  category: string;
+  title: string;
+  rationale: string;
+  suggestion: string | null;
+  confidence: number;
+  kind: string;
+}
+
+/**
+ * Order one review's findings the way the PR-list FINDINGS popover renders
+ * them: CRITICAL → WARNING → SUGGESTION, ties broken by confidence (desc).
+ */
+export function sortFindingsForSummary(rows: FindingSummaryRow[]): Finding[] {
+  return [...rows]
+    .sort(
+      (a, b) =>
+        (SEVERITY_RANK[a.severity] ?? 99) - (SEVERITY_RANK[b.severity] ?? 99) ||
+        b.confidence - a.confidence,
+    )
+    .map((r) => ({
+      id: r.id,
+      severity: r.severity as Finding['severity'],
+      category: r.category as Finding['category'],
+      title: r.title,
+      file: r.file,
+      start_line: r.startLine,
+      end_line: r.endLine,
+      rationale: r.rationale,
+      suggestion: r.suggestion,
+      confidence: r.confidence,
+      kind: r.kind as Finding['kind'],
+    }));
 }
 
 /**
