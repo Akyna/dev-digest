@@ -23,7 +23,12 @@ export const ConventionCandidateProposal = z.object({
   category: z
     .string()
     .describe('Short grouping label, e.g. naming, error-handling, structure, testing, api.'),
-  rule: z.string().describe('One sentence, imperative, stating the convention.'),
+  rule: z
+    .string()
+    .describe(
+      'One sentence, phrased as a strict directive starting with "Always" or "Never" — ' +
+        'e.g. "Always use async/await instead of .then() chains." or "Never commit secrets in plaintext."',
+    ),
   evidence_path: z.string().describe('Path of the file this rule was observed in, verbatim.'),
   evidence_line: z.number().int().min(1).describe('1-indexed line number where the pattern appears.'),
   evidence_snippet: z
@@ -44,7 +49,12 @@ FOLLOWS, not a generic best practice — every rule you propose must be
 grounded in a literal line you can quote. Never invent a file, a line number,
 or a snippet: if you cannot point at real source text, drop the rule instead
 of guessing. Judgment goes in the rule text; the JSON schema constrains only
-its shape.`;
+its shape.
+
+Phrase every rule as a strict directive starting with the word "Always" or
+"Never" — never "Use", "Prefer", "Consider", or a bare description of what the
+code does. E.g. "Always validate the request body with Zod before use." /
+"Never import an implementation type without \`import type\`."`;
 
 export function fileSelectionMessages(paths: string[]) {
   return [

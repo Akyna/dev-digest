@@ -151,6 +151,7 @@ export class ConventionsService {
       evidencePath: c.evidence_path,
       evidenceSnippet: c.evidence_snippet,
       evidenceLine: c.evidence_line,
+      evidenceEndLine: c.evidence_end_line,
       confidence: c.confidence,
       supportCount: c.support_count,
     }));

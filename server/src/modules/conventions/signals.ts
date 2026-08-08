@@ -45,7 +45,7 @@ export function extractSignals(files: SampledFile[]): ConventionSignal[] {
           const line = findLine(file.content, '"strict"');
           out.push({
             category: 'type-safety',
-            rule: 'TypeScript strict mode is enabled — avoid `any` and unchecked nulls.',
+            rule: 'Always keep TypeScript strict mode enabled — never rely on implicit `any` or unchecked nulls.',
             evidence_path: file.path,
             evidence_line: line,
             evidence_snippet: snippetAt(file.content, line),
@@ -57,7 +57,7 @@ export function extractSignals(files: SampledFile[]): ConventionSignal[] {
           const line = findLine(file.content, '"paths"');
           out.push({
             category: 'structure',
-            rule: 'Imports use tsconfig path aliases rather than long relative paths.',
+            rule: 'Always use the tsconfig path aliases for imports — never a long relative path.',
             evidence_path: file.path,
             evidence_line: line,
             evidence_snippet: snippetAt(file.content, line),
@@ -78,7 +78,7 @@ export function extractSignals(files: SampledFile[]): ConventionSignal[] {
           const line = findLine(file.content, '"packageManager"');
           out.push({
             category: 'tooling',
-            rule: `Package manager is pinned to \`${pm}\` — do not use a different one.`,
+            rule: `Always use \`${pm}\` as the package manager — never a different one.`,
             evidence_path: file.path,
             evidence_line: line,
             evidence_snippet: snippetAt(file.content, line),
@@ -91,7 +91,7 @@ export function extractSignals(files: SampledFile[]): ConventionSignal[] {
           const line = findLine(file.content, '"test"');
           out.push({
             category: 'testing',
-            rule: 'Tests run on Vitest.',
+            rule: 'Always write tests using Vitest.',
             evidence_path: file.path,
             evidence_line: line,
             evidence_snippet: snippetAt(file.content, line),
@@ -111,7 +111,7 @@ export function extractSignals(files: SampledFile[]): ConventionSignal[] {
           const line = findLine(file.content, '"semi"');
           out.push({
             category: 'formatting',
-            rule: 'Prettier is configured with `semi: false` — no trailing semicolons.',
+            rule: 'Never add trailing semicolons (Prettier `semi: false`).',
             evidence_path: file.path,
             evidence_line: line,
             evidence_snippet: snippetAt(file.content, line),
@@ -123,7 +123,7 @@ export function extractSignals(files: SampledFile[]): ConventionSignal[] {
           const line = findLine(file.content, '"singleQuote"');
           out.push({
             category: 'formatting',
-            rule: 'Prettier is configured with `singleQuote: true` — use single quotes.',
+            rule: 'Always use single quotes (Prettier `singleQuote: true`).',
             evidence_path: file.path,
             evidence_line: line,
             evidence_snippet: snippetAt(file.content, line),
@@ -140,7 +140,7 @@ export function extractSignals(files: SampledFile[]): ConventionSignal[] {
       const line = findLine(file.content, 'indent_style');
       out.push({
         category: 'formatting',
-        rule: 'Indentation uses spaces, not tabs (`.editorconfig`).',
+        rule: 'Always indent with spaces — never tabs (`.editorconfig`).',
         evidence_path: file.path,
         evidence_line: line,
         evidence_snippet: snippetAt(file.content, line),

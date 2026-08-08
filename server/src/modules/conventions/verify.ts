@@ -8,6 +8,9 @@ export interface VerifiedConvention {
   rule: string;
   evidence_path: string;
   evidence_line: number;
+  /** Set when the (grounded) snippet spans more than one line; null for a
+      single-line match. */
+  evidence_end_line: number | null;
   evidence_snippet: string;
   confidence: number;
   support_count: number;
@@ -50,6 +53,40 @@ function jaccard(a: Set<string>, b: Set<string>): number {
 
 const DEDUP_THRESHOLD = 0.6;
 
+/** A snippet's non-empty lines, each whitespace-normalized — the unit both
+    the file-content search and the support count operate on, so a two-line
+    quote (e.g. a decorator + the field it decorates) is grounded as a single
+    contiguous span rather than two unrelated single-line matches. */
+function snippetPattern(snippet: string): string[] {
+  return snippet
+    .split('\n')
+    .map(normalize)
+    .filter((l) => l.length > 0);
+}
+
+/**
+ * Every 1-indexed start line in `fileLines` where `pattern` matches a
+ * contiguous window — each pattern line must be `included in` (not
+ * necessarily equal to) the corresponding file line, so a partial-line quote
+ * still grounds. Returns every match (used for both "does it exist at all"
+ * and the support count), not just the first.
+ */
+function findSpans(fileLines: string[], pattern: string[]): number[] {
+  if (pattern.length === 0 || pattern.length > fileLines.length) return [];
+  const starts: number[] = [];
+  for (let i = 0; i <= fileLines.length - pattern.length; i++) {
+    let ok = true;
+    for (let k = 0; k < pattern.length; k++) {
+      if (!normalize(fileLines[i + k] ?? '').includes(pattern[k]!)) {
+        ok = false;
+        break;
+      }
+    }
+    if (ok) starts.push(i + 1);
+  }
+  return starts;
+}
+
 /**
  * Grounds each proposed candidate against the file content the model was
  * actually shown — the trust boundary between "the model said" and "the repo
@@ -59,12 +96,12 @@ const DEDUP_THRESHOLD = 0.6;
  *
  * Steps, in order:
  *  1. file must be one of the sampled files, else drop ('file not sampled');
- *  2. snippet must appear in that file (normalized-whitespace compare) — if it
- *     appears on a different line than claimed, CORRECT `evidence_line` rather
- *     than dropping (the model can misjudge a line number while still quoting
- *     real text);
- *  3. compute `support_count` — how many sampled files contain a normalized
- *     match of the snippet's token set (a rough "how consistent is this");
+ *  2. the snippet's lines (normalized) must match a contiguous span in that
+ *     file — if the span is at a different start line than claimed, CORRECT
+ *     `evidence_line`/`evidence_end_line` rather than dropping (the model can
+ *     misjudge a line number while still quoting real text);
+ *  3. `support_count` = how many times that exact span pattern recurs in the
+ *     file (a rough "how consistent is this");
  *  4. dedup near-identical rules (token-set Jaccard over the rule text),
  *     merging support_count into the first occurrence;
  *  5. calibrate confidence by support, then drop anything under MIN_CONFIDENCE.
@@ -85,36 +122,33 @@ export function verifyCandidates(
       continue;
     }
 
-    const lines = file.content.split('\n');
-    const wantedNorm = normalize(c.evidence_snippet);
-    if (wantedNorm.length === 0) {
+    const pattern = snippetPattern(c.evidence_snippet);
+    if (pattern.length === 0) {
       dropped.push({ candidate: c, reason: 'empty evidence_snippet' });
       continue;
     }
 
-    let line = c.evidence_line;
-    const claimedLine = normalize(lines[c.evidence_line - 1] ?? '');
-    const matchesClaimed = claimedLine.length > 0 && claimedLine.includes(wantedNorm);
-
-    if (!matchesClaimed) {
-      const foundIdx = lines.findIndex((l) => normalize(l).includes(wantedNorm));
-      if (foundIdx === -1) {
-        dropped.push({ candidate: c, reason: 'evidence_snippet not found in file' });
-        continue;
-      }
-      line = foundIdx + 1; // auto-correct rather than drop
+    const lines = file.content.split('\n');
+    const spans = findSpans(lines, pattern);
+    if (spans.length === 0) {
+      dropped.push({ candidate: c, reason: 'evidence_snippet not found in file' });
+      continue;
     }
 
-    const support = lines.filter((l) => normalize(l).includes(wantedNorm)).length;
+    // Prefer the model's claimed line when it's a genuine match; otherwise
+    // auto-correct to the first real occurrence rather than dropping.
+    const start = spans.includes(c.evidence_line) ? c.evidence_line : spans[0]!;
+    const end = start + pattern.length - 1;
 
     kept.push({
       category: c.category,
       rule: c.rule,
       evidence_path: c.evidence_path,
-      evidence_line: line,
+      evidence_line: start,
+      evidence_end_line: end > start ? end : null,
       evidence_snippet: c.evidence_snippet,
       confidence: c.confidence,
-      support_count: Math.max(1, support),
+      support_count: Math.max(1, spans.length),
     });
   }
 
@@ -125,6 +159,7 @@ export function verifyCandidates(
       rule: s.rule,
       evidence_path: s.evidence_path,
       evidence_line: s.evidence_line,
+      evidence_end_line: null,
       evidence_snippet: s.evidence_snippet,
       confidence: s.confidence,
       support_count: s.support_count,

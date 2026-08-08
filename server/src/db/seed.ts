@@ -494,7 +494,7 @@ export async function seed(db: Db): Promise<{ workspaceId: string; userId: strin
       {
         workspaceId,
         repoId,
-        rule: 'Rate limiter middleware lives under src/middleware/, one file per concern.',
+        rule: 'Always put rate-limiter middleware under src/middleware/, one file per concern.',
         category: 'structure',
         evidencePath: 'src/middleware/ratelimit.ts',
         evidenceSnippet: "export function rateLimit(opts: RateLimitOptions) {",
@@ -507,7 +507,7 @@ export async function seed(db: Db): Promise<{ workspaceId: string; userId: strin
       {
         workspaceId,
         repoId,
-        rule: 'Public API handlers validate the request body with Zod before touching it.',
+        rule: 'Always validate the request body with Zod before a public API handler touches it.',
         category: 'api',
         evidencePath: 'src/api/public/webhooks.ts',
         evidenceSnippet: 'const body = WebhookPayload.parse(req.body);',
@@ -520,7 +520,7 @@ export async function seed(db: Db): Promise<{ workspaceId: string; userId: strin
       {
         workspaceId,
         repoId,
-        rule: 'Config values are read once into a typed `config` object, never via bare process.env.',
+        rule: 'Never read `process.env` directly — always go through the typed `config` object.',
         category: 'structure',
         evidencePath: 'src/config.ts',
         evidenceSnippet: 'export const config = { port: 3000, ... };',

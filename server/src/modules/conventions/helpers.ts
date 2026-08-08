@@ -75,43 +75,43 @@ export function toConventionDto(row: ConventionRow): {
   };
 }
 
+/** `path:line` or `path:startLine-endLine` for the "Detected in" line —
+    a range when the grounded snippet spans more than one line. */
+function evidenceLocation(path: string, line: number | null, endLine: number | null): string {
+  if (!line) return path;
+  if (endLine && endLine > line) return `${path}:${line}-${endLine}`;
+  return `${path}:${line}`;
+}
+
 /**
  * Markdown body for a skill assembled from the ACCEPTED convention rows the
- * user selected. One `##` section per rule, each carrying its `file:line`
+ * user selected. One `##` section per rule — heading is the rule's slug, body
+ * is the (already Always/Never-phrased) rule sentence, then its `file:line`
  * evidence and a fenced snippet, so the resulting skill is itself auditable.
  */
 export function buildSkillBody(
-  candidates: { category: string | null; rule: string; evidence_path: string; evidence_line: number | null; evidence_snippet: string }[],
+  candidates: {
+    rule: string;
+    evidence_path: string;
+    evidence_line: number | null;
+    evidence_end_line?: number | null;
+    evidence_snippet: string;
+  }[],
   repoName: string,
 ): string {
-  const intro = `Conventions extracted from \`${repoName}\`. Each rule below was observed in the repository's own source — see the linked evidence.`;
+  const intro = `House conventions for \`${repoName}\`. Flag changes that violate any rule below and cite the offending \`file:line\`.`;
 
-  const byCategory = new Map<string, typeof candidates>();
-  for (const c of candidates) {
-    const key = c.category ?? 'general';
-    const arr = byCategory.get(key) ?? [];
-    arr.push(c);
-    byCategory.set(key, arr);
-  }
-
-  const sections = [...byCategory.entries()].map(([category, rules]) => {
-    const body = rules
-      .map((c) => {
-        const loc = c.evidence_line ? `${c.evidence_path}:${c.evidence_line}` : c.evidence_path;
-        return [
-          `### ${slugifyRule(c.rule).replace(/-/g, ' ')}`,
-          '',
-          c.rule,
-          '',
-          `Detected in \`${loc}\``,
-          '',
-          '```',
-          c.evidence_snippet,
-          '```',
-        ].join('\n');
-      })
-      .join('\n\n');
-    return `## ${category}\n\n${body}`;
+  const sections = candidates.map((c) => {
+    const loc = evidenceLocation(c.evidence_path, c.evidence_line, c.evidence_end_line ?? null);
+    return [
+      `## ${slugifyRule(c.rule)}`,
+      c.rule,
+      '',
+      `Detected in \`${loc}\`:`,
+      '```',
+      c.evidence_snippet,
+      '```',
+    ].join('\n');
   });
 
   return [`# ${suggestSkillName(repoName)}`, '', intro, '', ...sections].join('\n\n');

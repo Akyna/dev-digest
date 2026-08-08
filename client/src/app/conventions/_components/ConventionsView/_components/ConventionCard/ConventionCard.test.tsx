@@ -53,6 +53,20 @@ describe("ConventionCard", () => {
     expect(onStatusChange).toHaveBeenCalledWith("rejected");
   });
 
+  it("clicking the accepted button toggles back to pending", () => {
+    const onStatusChange = vi.fn();
+    renderWithIntl(
+      <ConventionCard
+        candidate={{ ...CANDIDATE, status: "accepted" }}
+        onStatusChange={onStatusChange}
+        onEdit={() => {}}
+      />,
+    );
+    expect(screen.getByText("Accepted")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Accepted"));
+    expect(onStatusChange).toHaveBeenCalledWith("pending");
+  });
+
   it("edits the rule and snippet inline", () => {
     const onEdit = vi.fn();
     renderWithIntl(<ConventionCard candidate={CANDIDATE} onStatusChange={() => {}} onEdit={onEdit} />);

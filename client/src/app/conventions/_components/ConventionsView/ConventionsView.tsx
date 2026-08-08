@@ -34,7 +34,11 @@ export function ConventionsView() {
   const update = useUpdateConvention(repoId);
   const [creatingSkill, setCreatingSkill] = React.useState(false);
 
-  const candidates: ConventionCandidate[] = data?.candidates ?? [];
+  const allCandidates: ConventionCandidate[] = data?.candidates ?? [];
+  // A rejected candidate leaves the list entirely (not just muted) — the only
+  // way back is a fresh scan. `visible` is what the header count, the list,
+  // and the empty-state all key off.
+  const candidates = allCandidates.filter((c) => c.status !== "rejected");
   const accepted = acceptedIds(candidates);
   const pendingIds = candidates.filter((c) => c.status === "pending").map((c) => c.id);
 
@@ -103,9 +107,9 @@ export function ConventionsView() {
           </div>
         </div>
 
-        {data && (
+        {data && candidates.length > 0 && (
           <div style={s.metaRow}>
-            <span>{t("page.candidateCount", { count: candidates.length })}</span>
+            <span>{t("page.acceptedOfTotal", { accepted: accepted.length, total: candidates.length })}</span>
             {data.last_scan_at && (
               <span>{t("page.lastScan", { date: new Date(data.last_scan_at).toLocaleString() })}</span>
             )}

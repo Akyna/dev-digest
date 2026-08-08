@@ -8,7 +8,17 @@ export function conventionFileHref(
   defaultBranch: string | null | undefined,
   path: string,
   line: number | null,
+  endLine: number | null,
 ): string | undefined {
   if (!repoFullName || !defaultBranch || !path) return undefined;
-  return githubBlobUrl(repoFullName, defaultBranch, path, line ?? undefined);
+  return githubBlobUrl(repoFullName, defaultBranch, path, line ?? undefined, endLine ?? undefined);
+}
+
+/** `path:line` or `path:line-endLine` — the label shown next to the evidence
+    link, mirroring the "Detected in" range the server renders into the skill
+    body when a grounded snippet spans more than one line. */
+export function evidenceLabel(path: string, line: number | null, endLine: number | null): string {
+  if (!line) return path;
+  if (endLine && endLine > line) return `${path}:${line}-${endLine}`;
+  return `${path}:${line}`;
 }

@@ -89,6 +89,50 @@ describe('verifyCandidates', () => {
     expect(kept).toHaveLength(0);
   });
 
+  it('grounds a multi-line snippet as a contiguous span and sets evidence_end_line', () => {
+    const files: SampledFile[] = [
+      {
+        path: 'src/api/users.ts',
+        content: 'line one\nasync function getUser() {\n  return await db.users.find();\n}\nline five\n',
+      },
+    ];
+    const { kept, dropped } = verifyCandidates(
+      [
+        proposal({
+          evidence_path: 'src/api/users.ts',
+          evidence_line: 2,
+          evidence_snippet: 'async function getUser() {\n  return await db.users.find();\n}',
+          confidence: 1,
+        }),
+      ],
+      files,
+      [],
+    );
+    expect(dropped).toHaveLength(0);
+    expect(kept).toHaveLength(1);
+    expect(kept[0]!.evidence_line).toBe(2);
+    expect(kept[0]!.evidence_end_line).toBe(4);
+  });
+
+  it('drops a multi-line snippet whose lines do not appear contiguously', () => {
+    const files: SampledFile[] = [
+      { path: 'src/api/users.ts', content: 'async function getUser() {\nline two\n  return await db.users.find();\n}\n' },
+    ];
+    const { kept, dropped } = verifyCandidates(
+      [
+        proposal({
+          evidence_path: 'src/api/users.ts',
+          evidence_line: 1,
+          evidence_snippet: 'async function getUser() {\n  return await db.users.find();\n}',
+        }),
+      ],
+      files,
+      [],
+    );
+    expect(kept).toHaveLength(0);
+    expect(dropped).toHaveLength(1);
+  });
+
   it('passes deterministic signals straight through as kept', () => {
     const { kept } = verifyCandidates(
       [],
@@ -115,8 +159,7 @@ describe('buildSkillBody', () => {
     const body = buildSkillBody(
       [
         {
-          category: 'naming',
-          rule: 'Use camelCase for variables.',
+          rule: 'Always use camelCase for variables.',
           evidence_path: 'src/foo.ts',
           evidence_line: 3,
           evidence_snippet: 'const fooBar = 1;',
@@ -125,25 +168,39 @@ describe('buildSkillBody', () => {
       'acme/payments-api',
     );
     expect(body).toContain('# acme-payments-api-conventions');
-    expect(body).toContain('## naming');
-    expect(body).toContain('Use camelCase for variables.');
-    expect(body).toContain('Detected in `src/foo.ts:3`');
+    expect(body).toContain('## always-use-camelcase-for-variables');
+    expect(body).toContain('Always use camelCase for variables.');
+    expect(body).toContain('Detected in `src/foo.ts:3`:');
     expect(body).toContain('const fooBar = 1;');
   });
 
-  it('groups multiple rules under the same category heading', () => {
+  it('renders a line range in "Detected in" when the snippet spans multiple lines', () => {
     const body = buildSkillBody(
       [
         {
-          category: 'testing',
-          rule: 'Tests run on Vitest.',
+          rule: 'Always use async/await instead of .then() chains.',
+          evidence_path: 'src/api/users.ts',
+          evidence_line: 23,
+          evidence_end_line: 31,
+          evidence_snippet: 'async function getUser() {\n  return await db.users.find();\n}',
+        },
+      ],
+      'acme/payments-api',
+    );
+    expect(body).toContain('Detected in `src/api/users.ts:23-31`:');
+  });
+
+  it('renders one ## section per rule, in the given order', () => {
+    const body = buildSkillBody(
+      [
+        {
+          rule: 'Always write tests using Vitest.',
           evidence_path: 'package.json',
           evidence_line: 5,
           evidence_snippet: '"test": "vitest"',
         },
         {
-          category: 'testing',
-          rule: 'Test files end in .test.ts.',
+          rule: 'Never name a test file anything but *.test.ts.',
           evidence_path: 'test/foo.test.ts',
           evidence_line: 1,
           evidence_snippet: 'describe(...)',
@@ -151,6 +208,6 @@ describe('buildSkillBody', () => {
       ],
       'acme/payments-api',
     );
-    expect(body.match(/## testing/g)).toHaveLength(1);
+    expect(body.match(/^## /gm)).toHaveLength(2);
   });
 });

@@ -5,8 +5,8 @@
     { "cmd": ["open", "{BASE}/conventions"], "label": "load the conventions page" },
     { "cmd": ["wait", "--url", "/conventions"], "label": "conventions route reached" },
     { "cmd": ["wait", "--load", "networkidle"], "label": "conventions fetch settles" },
-    { "cmd": ["wait", "--text", "Rate limiter middleware lives under src/middleware/"], "label": "seeded convention is visible" },
+    { "cmd": ["wait", "--text", "Always put rate-limiter middleware under src/middleware/"], "label": "seeded convention is visible" },
     { "cmd": ["wait", "--text", "src/middleware/ratelimit.ts:1"], "label": "evidence file:line is rendered" },
-    { "cmd": ["wait", "--text", "Public API handlers validate the request body"], "label": "second seeded convention is visible" }
+    { "cmd": ["wait", "--text", "Always validate the request body with Zod"], "label": "second seeded convention is visible" }
   ]
 }
