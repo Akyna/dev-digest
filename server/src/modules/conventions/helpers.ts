@@ -12,8 +12,19 @@ export function slugifyRule(rule: string): string {
   );
 }
 
+/** Kebab-cases a repo name for use in a generated skill name — repo.name is
+    normally already clean, but this guards against spaces/slashes so the
+    result always satisfies the skill-name regex in `skills/routes.ts`. */
+function slugRepoName(repoName: string): string {
+  return repoName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
 export function suggestSkillName(repoName: string): string {
-  return `${repoName} conventions`;
+  return `${slugRepoName(repoName)}-conventions`;
+}
+
+export function suggestSkillDescription(count: number, repoName: string): string {
+  return `${count} house convention${count === 1 ? '' : 's'} extracted from ${repoName}`;
 }
 
 /** Extends the vendored `ConventionCandidate` contract with the fields this

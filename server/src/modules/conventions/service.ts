@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import type { Container } from '../../platform/container.js';
-import type { ConventionCandidate } from '@devdigest/shared';
+import type { ConventionCandidate, SkillType } from '@devdigest/shared';
 import { NotFoundError, ValidationError } from '../../platform/errors.js';
 import * as t from '../../db/schema.js';
 import { getFeatureModelOverride } from '../settings/feature-models.js';
@@ -17,8 +17,8 @@ import {
 } from './prompts.js';
 import { verifyCandidates } from './verify.js';
 import { ConventionsRepository, type ConventionRow, type InsertConvention } from './repository.js';
-import { buildSkillBody, suggestSkillName, toConventionDto } from './helpers.js';
-import { DEFAULT_MODEL, DEFAULT_PROVIDER, DEFAULT_SKILL_DESCRIPTION } from './constants.js';
+import { buildSkillBody, suggestSkillDescription, suggestSkillName, toConventionDto } from './helpers.js';
+import { DEFAULT_MODEL, DEFAULT_PROVIDER } from './constants.js';
 
 export interface ExtractStats {
   sampled: number;
@@ -52,7 +52,7 @@ export interface SkillDraft {
 export interface CreateSkillFromConventionsInput extends SkillDraftInput {
   name: string;
   description?: string;
-  type: 'convention';
+  type: SkillType;
   enabled?: boolean;
   body: string;
   agent_ids?: string[];
@@ -196,7 +196,7 @@ export class ConventionsService {
     const rows = await this.acceptedRows(workspaceId, input.convention_ids);
     return {
       name: suggestSkillName(repo.name),
-      description: DEFAULT_SKILL_DESCRIPTION,
+      description: suggestSkillDescription(rows.length, repo.name),
       body: buildSkillBody(rows.map(toConventionDto), repo.name),
     };
   }
@@ -216,7 +216,7 @@ export class ConventionsService {
     const skill = await skillsService.create(workspaceId, {
       name: input.name,
       description: input.description,
-      type: 'convention',
+      type: input.type,
       body: input.body,
       source: 'extracted',
       enabled: input.enabled,

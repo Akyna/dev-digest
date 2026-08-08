@@ -5,22 +5,37 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Button, Checkbox, FormField, Modal, Skeleton, Textarea, Toggle, TextInput } from "@devdigest/ui";
+import {
+  Button,
+  Checkbox,
+  FormField,
+  Icon,
+  Modal,
+  SelectInput,
+  Skeleton,
+  Textarea,
+  Toggle,
+  TextInput,
+} from "@devdigest/ui";
+import type { SkillType } from "@devdigest/shared";
 import { useAgents } from "@/lib/hooks/agents";
 import { useCreateSkillFromConventions, useSkillDraft } from "@/lib/hooks/conventions";
 import { useToast } from "@/lib/toast";
 import { approxTokens } from "@/lib/tokens";
 import { canSubmit, defaultAgentIds } from "./helpers";
-import { BODY_ROWS, MODAL_WIDTH } from "./constants";
+import { BODY_ROWS, DEFAULT_SKILL_TYPE, MODAL_WIDTH, SKILL_TYPE_VALUES } from "./constants";
 import { s } from "./styles";
 
 export function CreateSkillFromConventionsModal({
   repoId,
+  repoName,
   conventionIds,
   onClose,
 }: {
   repoId: string;
+  repoName: string;
   conventionIds: string[];
   onClose: () => void;
 }) {
@@ -30,8 +45,10 @@ export function CreateSkillFromConventionsModal({
   const createSkill = useCreateSkillFromConventions(repoId);
   const { data: agents } = useAgents();
 
+  const [subtitle, setSubtitle] = React.useState("");
   const [name, setName] = React.useState("");
   const [description, setDescription] = React.useState("");
+  const [type, setType] = React.useState<SkillType>(DEFAULT_SKILL_TYPE);
   const [body, setBody] = React.useState("");
   const [enabled, setEnabled] = React.useState(true);
   const [agentIds, setAgentIds] = React.useState<string[]>([]);
@@ -40,6 +57,10 @@ export function CreateSkillFromConventionsModal({
   React.useEffect(() => {
     draft.mutate(conventionIds, {
       onSuccess: (d) => {
+        // The generated name doubles as the subtitle — a fixed, repo-derived
+        // label distinct from the (editable) name field below, so renaming the
+        // skill doesn't also rewrite the subtitle out from under the user.
+        setSubtitle(d.name);
         setName(d.name);
         setDescription(d.description);
         setBody(d.body);
@@ -59,13 +80,15 @@ export function CreateSkillFromConventionsModal({
   const toggleAgent = (id: string) =>
     setAgentIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
 
+  const typeOptions = SKILL_TYPE_VALUES.map((v) => ({ value: v, label: v }));
+
   const submit = () =>
     createSkill.mutate(
       {
         convention_ids: conventionIds,
         name,
         description,
-        type: "convention",
+        type,
         enabled,
         body,
         agent_ids: agentIds,
@@ -82,7 +105,7 @@ export function CreateSkillFromConventionsModal({
     <Modal
       width={MODAL_WIDTH}
       title={t("modal.title")}
-      subtitle={t("modal.subtitle", { count: conventionIds.length })}
+      subtitle={subtitle}
       onClose={onClose}
       footer={
         <div style={s.footer}>
@@ -107,6 +130,17 @@ export function CreateSkillFromConventionsModal({
         </div>
       ) : (
         <div style={s.body}>
+          <div style={s.banner}>
+            <Icon.Link size={15} style={s.bannerIcon} />
+            <span>
+              {t("modal.banner.mergedFrom", { count: conventionIds.length })}{" "}
+              <Link href={`/repos/${repoId}/pulls`} style={s.bannerLink}>
+                {repoName}
+              </Link>
+              . {t("modal.banner.editable")}
+            </span>
+          </div>
+
           <FormField label={t("modal.fields.name")} required>
             <TextInput value={name} onChange={setName} placeholder={t("modal.fields.namePlaceholder")} />
           </FormField>
@@ -115,9 +149,18 @@ export function CreateSkillFromConventionsModal({
             <Textarea value={description} onChange={setDescription} rows={2} />
           </FormField>
 
-          <FormField label={t("modal.fields.enabled")}>
-            <Toggle on={enabled} onChange={setEnabled} />
-          </FormField>
+          <div style={s.row}>
+            <div style={s.rowField}>
+              <FormField label={t("modal.fields.type")}>
+                <SelectInput value={type} onChange={(v) => setType(v as SkillType)} options={typeOptions} />
+              </FormField>
+            </div>
+            <div style={s.rowField}>
+              <FormField label={t("modal.fields.enabled")} hint={t("modal.fields.enabledHint")}>
+                <Toggle on={enabled} onChange={setEnabled} />
+              </FormField>
+            </div>
+          </div>
 
           <FormField
             label={t("modal.fields.body")}

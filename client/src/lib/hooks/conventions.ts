@@ -5,7 +5,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
-import type { Skill } from "@devdigest/shared";
+import type { Skill, SkillType } from "@devdigest/shared";
 
 /** Extends the server's ConventionCandidate DTO with the L02 fields
     (category/status/evidence_line/…) — local, since @devdigest/shared is
@@ -109,7 +109,7 @@ export interface CreateSkillFromConventionsInput {
   convention_ids: string[];
   name: string;
   description?: string;
-  type: "convention";
+  type: SkillType;
   enabled?: boolean;
   body: string;
   agent_ids?: string[];

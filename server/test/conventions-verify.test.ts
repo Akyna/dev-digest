@@ -124,7 +124,7 @@ describe('buildSkillBody', () => {
       ],
       'acme/payments-api',
     );
-    expect(body).toContain('# acme/payments-api conventions');
+    expect(body).toContain('# acme-payments-api-conventions');
     expect(body).toContain('## naming');
     expect(body).toContain('Use camelCase for variables.');
     expect(body).toContain('Detected in `src/foo.ts:3`');

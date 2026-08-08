@@ -40,7 +40,10 @@ export const MAX_SAMPLE_BYTES = 120_000;
 /** Candidates below this calibrated confidence are dropped in verify.ts. */
 export const MIN_CONFIDENCE = 0.4;
 
-export const DEFAULT_PROVIDER = 'openai' as const;
-export const DEFAULT_MODEL = 'gpt-5.4';
-
-export const DEFAULT_SKILL_DESCRIPTION = 'Conventions extracted from the repository.';
+// Cheap default when the workspace hasn't overridden the 'conventions' feature
+// model in Settings — same provider/model the other cheap passes use (e.g. the
+// seeded agents' default in db/seed.ts), NOT the vendored FEATURE_MODELS
+// registry default (openai/gpt-5.4), which requires a key most workspaces
+// running this course locally don't have configured.
+export const DEFAULT_PROVIDER = 'openrouter' as const;
+export const DEFAULT_MODEL = 'deepseek/deepseek-v4-flash';

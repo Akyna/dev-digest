@@ -77,7 +77,7 @@ export default async function conventionsRoutes(appBase: FastifyInstance) {
       const skill = await service.createSkill(workspaceId, req.params.id, {
         convention_ids: body.convention_ids,
         name: body.name,
-        type: 'convention',
+        type: body.type,
         body: body.body,
         ...(body.description !== undefined ? { description: body.description } : {}),
         ...(body.enabled !== undefined ? { enabled: body.enabled } : {}),

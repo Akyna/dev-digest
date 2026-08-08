@@ -40,17 +40,22 @@
   },
   "modal": {
     "title": "Create skill from conventions",
-    "subtitle": "{count, plural, one {# convention} other {# conventions}} selected",
     "draftError": "Could not build a draft from the selected conventions.",
     "createdToast": "Skill \"{name}\" created",
     "cancel": "Cancel",
     "create": "Create skill",
     "creating": "Creating…",
+    "banner": {
+      "mergedFrom": "Merged from {count, plural, one {# accepted convention} other {# accepted conventions}} in",
+      "editable": "Everything below is editable before you save."
+    },
     "fields": {
       "name": "Name",
-      "namePlaceholder": "e.g. acme/payments-api conventions",
+      "namePlaceholder": "e.g. payments-api-conventions",
       "description": "Description",
+      "type": "Type",
       "enabled": "Enabled",
+      "enabledHint": "Whether this block is added to agents' prompts.",
       "body": "Skill body",
       "tokens": "≈{count} tokens",
       "agents": "Link to agents",

@@ -63,7 +63,10 @@ d('/repos/:id/conventions', () => {
         }),
         github: new MockGitHubClient(),
         llm: {
-          openai: new MockLLMProvider('openai', {
+          // The service's default feature model (no workspace override set) is
+          // 'openrouter' (see conventions/constants.ts) — mock that one, not
+          // 'openai', or this test hits the real OpenRouter API.
+          openrouter: new MockLLMProvider('openrouter', {
             structuredBySchema: {
               ConventionFileSelection: { paths: ['package.json', 'tsconfig.json'] },
               ConventionExtraction: {
@@ -157,7 +160,7 @@ d('/repos/:id/conventions', () => {
       payload: { convention_ids: ids },
     });
     expect(draft.statusCode).toBe(200);
-    expect(draft.json().body).toContain('conv-repo conventions');
+    expect(draft.json().body).toContain('conv-repo-conventions');
 
     const agentRes = await app.inject({
       method: 'POST',

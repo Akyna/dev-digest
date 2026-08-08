@@ -67,6 +67,7 @@ export function ConventionsView() {
       {creatingSkill && (
         <CreateSkillFromConventionsModal
           repoId={repoId}
+          repoName={activeRepo?.name ?? t("page.repoFallback")}
           conventionIds={accepted}
           onClose={() => setCreatingSkill(false)}
         />
