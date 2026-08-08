@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray } from 'drizzle-orm';
 import type { Db } from '../../db/client.js';
 import * as t from '../../db/schema.js';
 import type { CiFailOn, Provider, ReviewStrategy } from '@devdigest/shared';
@@ -51,15 +51,23 @@ export interface LinkedSkillRow {
 export class AgentsRepository {
   constructor(private db: Db) {}
 
+  /** Ordered by name — same reason as `SkillsRepository.list`: without an
+      ORDER BY Postgres returns heap order, and an UPDATE rewrites the row at the
+      end of the heap, so saving an agent made its card jump down the list. */
   async list(workspaceId: string): Promise<AgentRow[]> {
-    return this.db.select().from(t.agents).where(eq(t.agents.workspaceId, workspaceId));
+    return this.db
+      .select()
+      .from(t.agents)
+      .where(eq(t.agents.workspaceId, workspaceId))
+      .orderBy(asc(t.agents.name));
   }
 
   async listEnabled(workspaceId: string): Promise<AgentRow[]> {
     return this.db
       .select()
       .from(t.agents)
-      .where(and(eq(t.agents.workspaceId, workspaceId), eq(t.agents.enabled, true)));
+      .where(and(eq(t.agents.workspaceId, workspaceId), eq(t.agents.enabled, true)))
+      .orderBy(asc(t.agents.name));
   }
 
   async getById(workspaceId: string, id: string): Promise<AgentRow | undefined> {
@@ -195,13 +203,50 @@ export class AgentsRepository {
       .from(t.agentSkills)
       .innerJoin(t.skills, eq(t.agentSkills.skillId, t.skills.id))
       .where(eq(t.agentSkills.agentId, agentId))
-      .orderBy(asc(t.agentSkills.order));
+      // `order` is not unique — service.linkSkill derives it from the current
+      // link count, so unlinking a middle skill then linking a new one yields a
+      // tie (0, 2, 2). Ties left unordered would make the assembled prompt's
+      // block sequence differ between runs, so break them deterministically.
+      .orderBy(asc(t.agentSkills.order), asc(t.skills.name));
     return rows.map((r) => ({ skill: r.skill, order: r.order }));
   }
 
   async skillIdsForAgent(agentId: string): Promise<string[]> {
     const links = await this.linkedSkills(agentId);
     return links.map((l) => l.skill.id);
+  }
+
+  /**
+   * Linked-skill count per agent for the whole workspace, in ONE grouped query.
+   *
+   * The agents list card shows this badge; resolving it through
+   * `linkedSkills` per card would be an N+1 against a list that is already
+   * paginated by nothing. Agents with no links are simply absent from the
+   * result — the caller defaults them to 0.
+   */
+  async skillCounts(workspaceId: string): Promise<Array<{ agentId: string; count: number }>> {
+    const rows = await this.db
+      .select({ agentId: t.agentSkills.agentId, count: count() })
+      .from(t.agentSkills)
+      .innerJoin(t.agents, eq(t.agents.id, t.agentSkills.agentId))
+      .where(eq(t.agents.workspaceId, workspaceId))
+      .groupBy(t.agentSkills.agentId);
+    return rows.map((r) => ({ agentId: r.agentId, count: Number(r.count) }));
+  }
+
+  /**
+   * Of `ids`, the ones that are real skills in this workspace. Used to sanitise
+   * a caller-supplied set before it reaches `setSkills`, which would otherwise
+   * take an FK violation on an unknown id — and, just as bad, would happily link
+   * a skill belonging to ANOTHER workspace into this agent's prompt.
+   */
+  async existingSkillIds(workspaceId: string, ids: string[]): Promise<Set<string>> {
+    if (ids.length === 0) return new Set();
+    const rows = await this.db
+      .select({ id: t.skills.id })
+      .from(t.skills)
+      .where(and(eq(t.skills.workspaceId, workspaceId), inArray(t.skills.id, ids)));
+    return new Set(rows.map((r) => r.id));
   }
 
   /** Link a skill to an agent at a given order (idempotent: upserts order). */
@@ -227,10 +272,17 @@ export class AgentsRepository {
    * the list are unlinked.
    */
   async setSkills(agentId: string, skillIds: string[]): Promise<void> {
-    await this.db.delete(t.agentSkills).where(eq(t.agentSkills.agentId, agentId));
-    if (skillIds.length === 0) return;
-    await this.db
-      .insert(t.agentSkills)
-      .values(skillIds.map((skillId, i) => ({ agentId, skillId, order: i })));
+    // Transactional because the DELETE is destructive on its own: if the INSERT
+    // fails (duplicate id → composite-PK violation, unknown id → FK violation)
+    // after an auto-committed DELETE, the agent is left with NO skills and no
+    // way back. The service dedupes and validates first, so a rejected INSERT
+    // now means a genuine conflict — and it rolls the DELETE back with it.
+    await this.db.transaction(async (tx) => {
+      await tx.delete(t.agentSkills).where(eq(t.agentSkills.agentId, agentId));
+      if (skillIds.length === 0) return;
+      await tx
+        .insert(t.agentSkills)
+        .values(skillIds.map((skillId, i) => ({ agentId, skillId, order: i })));
+    });
   }
 }

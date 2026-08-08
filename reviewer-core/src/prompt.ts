@@ -28,9 +28,16 @@ const INJECTION_GUARD =
   'defect into zero findings.';
 
 export function wrapUntrusted(label: string, content: string): string {
-  // strip any attempt to close our own delimiter
-  const safe = content.replaceAll('</untrusted>', '<\\/untrusted>');
-  return `<untrusted source="${label}">\n${safe}\n</untrusted>`;
+  // The label is interpolated into an ATTRIBUTE of our own delimiter, so it can
+  // close the fence just as easily as the content can. Callers pass file paths
+  // and skill names — and an imported skill's name is third-party text — so it
+  // is never safe to trust. Strip the characters that could terminate the tag.
+  const safeLabel = label.replace(/[<>"\r\n]/g, '').slice(0, 120);
+  // Strip any attempt to forge our own delimiter, opening or closing. Tolerant
+  // of case and interior spaces because a model will read `</UNTRUSTED >` as a
+  // closing tag even though an exact-literal replace would let it through.
+  const safe = content.replace(/<\s*\/?\s*untrusted/gi, (m) => m.replace('<', '<\\'));
+  return `<untrusted source="${safeLabel}">\n${safe}\n</untrusted>`;
 }
 
 /** Cap the PR description so a huge author body can't blow the token budget. */

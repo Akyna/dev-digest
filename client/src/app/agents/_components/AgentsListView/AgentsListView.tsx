@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { Button, Dropdown, EmptyState, ErrorState, Skeleton, Icon } from "@devdigest/ui";
 import { AppShell } from "../../../../components/app-shell";
 import { useAgents, useUpdateAgent } from "../../../../lib/hooks/agents";
+import { useAgentSkillCounts } from "../../../../lib/hooks/skills";
 import { AgentCard } from "../AgentCard";
 import { CreateAgentModal } from "./_components/CreateAgentModal";
 import { TEMPLATES } from "./constants";
@@ -18,6 +19,9 @@ export function AgentsListView() {
   const t = useTranslations("agents");
   const router = useRouter();
   const { data: agents, isLoading, isError, refetch } = useAgents();
+  // Its own query: a failed/pending count must not blank the grid, so the badge
+  // just reads 0 until it lands.
+  const { data: skillCounts } = useAgentSkillCounts();
   const update = useUpdateAgent();
   const [creating, setCreating] = React.useState(false);
   const [search, setSearch] = React.useState("");
@@ -80,12 +84,17 @@ export function AgentsListView() {
             onCta={() => setCreating(true)}
           />
         )}
+        {/* `skillCount` comes from the bulk GET /agents/skill-counts, not from
+            the per-agent GET /agents/:id/skills — one request for the whole grid
+            instead of one per card. The Agent DTO itself is vendored, so the
+            count travels alongside it rather than on it. */}
         {list.length > 0 && (
           <div style={s.grid}>
             {list.map((a) => (
               <AgentCard
                 key={a.id}
                 ag={a}
+                skillCount={skillCounts?.[a.id] ?? 0}
                 onClick={() => router.push(`/agents/${a.id}?tab=config`)}
                 onToggle={(enabled) => update.mutate({ id: a.id, patch: { enabled } })}
               />

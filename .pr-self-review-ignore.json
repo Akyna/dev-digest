@@ -1,4 +1,13 @@
 {
   "_readme": "Waivers for pr-self-review. Each entry suppresses matching findings from the merge gate — they still print in the report under 'Waived'. Schema: id (free text, for your own reference), match.file (repo-relative path or glob), match.rule (a skill name, an INV-id, or a finding category), reason (free text — no ticket reference required for this project), author, added (ISO date), expires (ISO date or null). An entry whose expires date has passed is ignored and flagged as stale in the report. See .claude/skills/pr-self-review/severity.md#waivers.",
-  "waivers": []
+  "waivers": [
+    {
+      "id": "nav-skills-entry",
+      "match": { "file": "client/src/vendor/ui/nav.ts", "rule": "INV-2" },
+      "reason": "Deliberate, user-approved exception taken during the Skills feature plan. NAV is the only definition of the sidebar and Sidebar.tsx imports it directly, so /skills cannot be reachable without an entry here. The edit is strictly additive (one NavGroup + one SHORTCUTS row) and carries an inline comment marking it as the sanctioned exception. Re-vendoring upstream is the correct long-term fix.",
+      "author": "Andrii Boiko",
+      "added": "2026-08-08",
+      "expires": null
+    }
+  ]
 }

@@ -1,0 +1,14 @@
+{
+  "name": "Skills list renders the seeded skills and opens one for preview",
+  "description": "Loads /skills, confirms a seeded skill (branch-coverage-gate) is rendered by SkillCard, opens it, and confirms the detail panel switches to the Preview tab. Exercises the skills list route, its API fetch, and URL-driven selection (?skill=&tab=).",
+  "steps": [
+    { "cmd": ["open", "{BASE}/skills"], "label": "load the skills page" },
+    { "cmd": ["wait", "--url", "/skills"], "label": "skills route reached" },
+    { "cmd": ["wait", "--load", "networkidle"], "label": "skills fetch settles" },
+    { "cmd": ["wait", "--text", "branch-coverage-gate"], "label": "seeded skill card is visible" },
+    { "cmd": ["find", "text", "branch-coverage-gate", "click"], "label": "select the skill" },
+    { "cmd": ["wait", "--url", "skill="], "label": "selection is reflected in the URL" },
+    { "cmd": ["find", "text", "Preview", "click"], "label": "switch to the Preview tab" },
+    { "cmd": ["wait", "--url", "tab=preview"], "label": "preview tab is active" }
+  ]
+}

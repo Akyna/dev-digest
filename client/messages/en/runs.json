@@ -50,6 +50,8 @@
       "specs": "Project context (dynamic)",
       "callers": "Callers of changed symbols — repo-intel (dynamic)",
       "user": "User / diff (dynamic)",
+      "tokens": "{count, plural, one {≈# token} other {≈# tokens}}",
+      "tokensHint": "Rough estimate (~4 characters per token), computed in the browser — not the billed token count.",
       "copy": "Copy",
       "fullscreen": "Open fullscreen",
       "search": "Search in this block…",

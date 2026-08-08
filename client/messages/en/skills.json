@@ -3,10 +3,13 @@
     "crumbLab": "Skills Lab",
     "crumbSkills": "Skills",
     "heading": "Skills",
+    "subtitle": "Configuration text an agent pulls into its review prompt. Never executed.",
     "addSkill": "Add Skill",
     "searchPlaceholder": "Search skills…",
     "loadError": "Could not load skills.",
     "menu": {
+      "createFromScratch": "Create from scratch",
+      "import": "Import",
       "fromFile": "Import from file",
       "fromUrl": "Import from URL",
       "community": "Search community skills…"
@@ -15,6 +18,10 @@
       "title": "No skills yet",
       "body": "Import a skill from a file, a URL, or the community catalog.",
       "cta": "Import from file"
+    },
+    "noMatch": {
+      "title": "No matching skills",
+      "body": "Try a different search term."
     },
     "selectPrompt": {
       "title": "Select a skill",
@@ -28,6 +35,80 @@
     "notFound": {
       "title": "Skill not found",
       "body": "It may have been deleted."
+    },
+    "tabs": {
+      "config": "Config",
+      "preview": "Preview",
+      "versions": "Versions",
+      "evals": "Evals",
+      "stats": "Stats"
+    },
+    "placeholder": {
+      "evals": {
+        "title": "Skill evals",
+        "body": "Scoring a skill against a fixture set is coming in a later lesson."
+      },
+      "stats": {
+        "title": "Skill stats",
+        "body": "Usage and token-cost stats are coming in a later lesson."
+      }
+    }
+  },
+  "config": {
+    "title": "Configuration",
+    "enabled": "Enabled",
+    "name": "Name",
+    "namePlaceholder": "pr-quality-rubric",
+    "description": "Description",
+    "descriptionPlaceholder": "Use when reviewing a pull request that touches database migrations…",
+    "descriptionHint": "The description is this skill's interface. It is what an agent reads when deciding whether to pull the skill in, so write it directively — \"Use when …\" — rather than as a summary of the body.",
+    "type": "Type",
+    "body": "Skill body (Markdown)",
+    "bodyHint": "Saving a changed body creates a new immutable version.",
+    "tokens": "≈{count} tokens",
+    "tokensHint": "Rough estimate of what this body costs in the assembled prompt.",
+    "save": "Save skill",
+    "saving": "Saving…",
+    "savedToast": "Saved \"{name}\" (v{version})."
+  },
+  "previewTab": {
+    "title": "Rendered body",
+    "note": "Rendered as the reviewing agent receives it.",
+    "empty": {
+      "title": "Nothing to preview",
+      "body": "This skill has an empty body."
+    }
+  },
+  "versions": {
+    "title": "Version history",
+    "note": "Restoring an older body creates a NEW version — history is never rewritten.",
+    "current": "current",
+    "version": "v{version}",
+    "restore": "Restore",
+    "restoring": "Restoring…",
+    "restoredToast": "Restored v{from} as v{version}.",
+    "loadError": "Could not load version history.",
+    "empty": {
+      "title": "No history yet",
+      "body": "Versions appear here once you save an edit."
+    }
+  },
+  "create": {
+    "title": "Create a skill",
+    "subtitle": "A skill is configuration text — it is never executed, only added to the review prompt.",
+    "cancel": "Cancel",
+    "create": "Create skill",
+    "creating": "Creating…",
+    "createdToast": "Created \"{name}\".",
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "pr-quality-rubric",
+      "description": "Description",
+      "descriptionPlaceholder": "Use when reviewing a pull request that touches database migrations…",
+      "descriptionHint": "The description is this skill's interface — an agent reads it to decide whether to pull the skill in. Write it directively (\"Use when …\").",
+      "type": "Type",
+      "body": "Skill body (Markdown)",
+      "bodyPlaceholder": "# Rule\nDescribe the rule…"
     }
   },
   "drawer": {
@@ -38,6 +119,7 @@
       "url": "From URL",
       "community": "Community"
     },
+    "comingSoon": "Coming in a later lesson.",
     "importFailed": "Import failed"
   },
   "file": {
@@ -49,7 +131,29 @@
     "bodyPlaceholder": "# Rule\nDescribe the rule…",
     "importing": "Importing…",
     "import": "Import skill",
-    "success": "Imported \"{name}\" (stored as untrusted data)."
+    "success": "Imported \"{name}\" (stored as untrusted data).",
+    "chooseLabel": "Skill file",
+    "chooseHint": "A .md skill file or a .zip skill bundle. Only Markdown is read — archive entries are listed, never unpacked and never executed.",
+    "choose": "Choose file…",
+    "change": "Choose a different file…",
+    "noFile": "No file selected",
+    "badExtension": "Only .md and .zip files can be imported.",
+    "preview": "Preview import",
+    "previewing": "Reading…",
+    "trustTitle": "Review this before you save it",
+    "trustBody": "An imported skill is someone else's instructions going into your agent's prompt. Read the body below first — it is stored as untrusted data and stays yours to vet.",
+    "derived": "Derived from the file",
+    "derivedName": "Name",
+    "derivedType": "Type",
+    "derivedDescription": "Description",
+    "bodyPreview": "Skill body",
+    "ignoredFiles": "Ignored files",
+    "ignoredHint": "These archive entries were listed and left alone — never unpacked, never executed.",
+    "warnings": "Warnings",
+    "unsaved": "Nothing has been saved yet — this is a preview.",
+    "save": "Save skill",
+    "saving": "Saving…",
+    "cancel": "Cancel"
   },
   "url": {
     "label": "Skill URL",
@@ -74,6 +178,9 @@
   "listItem": {
     "needsVetting": "needs vetting",
     "vettingTitle": "Untrusted source — vet before enabling",
+    "noDescription": "No description",
+    "deleteTitle": "Delete skill",
+    "deleteConfirm": "Delete skill \"{name}\"? This cannot be undone.",
     "type": {
       "rubric": "rubric",
       "convention": "convention",
