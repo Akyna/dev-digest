@@ -483,6 +483,56 @@ export async function seed(db: Db): Promise<{ workspaceId: string; userId: strin
     }
   }
 
+  // ---- L02 — seeded conventions (read-only e2e coverage; extraction itself
+  // is an LLM call and is not exercised by the deterministic e2e suite) ------
+  const [existingConvention] = await db
+    .select()
+    .from(t.conventions)
+    .where(and(eq(t.conventions.workspaceId, workspaceId), eq(t.conventions.repoId, repoId)));
+  if (!existingConvention) {
+    await db.insert(t.conventions).values([
+      {
+        workspaceId,
+        repoId,
+        rule: 'Rate limiter middleware lives under src/middleware/, one file per concern.',
+        category: 'structure',
+        evidencePath: 'src/middleware/ratelimit.ts',
+        evidenceSnippet: "export function rateLimit(opts: RateLimitOptions) {",
+        evidenceLine: 1,
+        confidence: 0.92,
+        supportCount: 3,
+        status: 'accepted',
+        accepted: true,
+      },
+      {
+        workspaceId,
+        repoId,
+        rule: 'Public API handlers validate the request body with Zod before touching it.',
+        category: 'api',
+        evidencePath: 'src/api/public/webhooks.ts',
+        evidenceSnippet: 'const body = WebhookPayload.parse(req.body);',
+        evidenceLine: 14,
+        confidence: 0.81,
+        supportCount: 2,
+        status: 'pending',
+        accepted: false,
+      },
+      {
+        workspaceId,
+        repoId,
+        rule: 'Config values are read once into a typed `config` object, never via bare process.env.',
+        category: 'structure',
+        evidencePath: 'src/config.ts',
+        evidenceSnippet: 'export const config = { port: 3000, ... };',
+        evidenceLine: 8,
+        confidence: 0.6,
+        supportCount: 1,
+        status: 'rejected',
+        accepted: false,
+      },
+    ]);
+  }
+
   return { workspaceId, userId };
 }
 

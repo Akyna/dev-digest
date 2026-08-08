@@ -30,6 +30,8 @@ export interface CreateSkillInput {
   body: string;
   source?: SkillSource;
   enabled?: boolean;
+  /** Repo-relative paths backing an `extracted` skill (see L02 conventions). */
+  evidenceFiles?: string[];
 }
 
 export interface UpdateSkillInput {
@@ -90,6 +92,7 @@ export class SkillsService {
       ...(input.description !== undefined ? { description: input.description } : {}),
       ...(input.source !== undefined ? { source: input.source } : {}),
       ...(input.enabled !== undefined ? { enabled: input.enabled } : {}),
+      ...(input.evidenceFiles !== undefined ? { evidenceFiles: input.evidenceFiles } : {}),
     });
     return toSkillDto(row);
   }

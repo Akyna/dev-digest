@@ -32,7 +32,10 @@ export const NAV: NavGroup[] = [
   // Additive only — nothing above or below was changed.
   {
     section: "SKILLS LAB",
-    items: [{ key: "skills", label: "Skills", icon: "Sparkles", href: "/skills", gKey: "s" }],
+    items: [
+      { key: "skills", label: "Skills", icon: "Sparkles", href: "/skills", gKey: "s" },
+      { key: "conventions", label: "Conventions", icon: "ListChecks", href: "/conventions" },
+    ],
   },
 ];
 
