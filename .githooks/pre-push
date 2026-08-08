@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Installed via `git config core.hooksPath .githooks` (see scripts/dev.sh).
+# Blocks `git push` when pr-self-review's stamp is missing, stale, or unresolved CRITICAL.
+# Bypass once: `git push --no-verify`. Bypass for this shell: `PR_SELF_REVIEW_SKIP=1 git push`.
+
+[ "${PR_SELF_REVIEW_SKIP:-0}" = "1" ] && exit 0
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+exec "$ROOT/scripts/pr-self-review-gate.sh"

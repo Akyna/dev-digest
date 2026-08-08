@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "scripts/pr-self-review-hook.sh",
+            "statusMessage": "pr-self-review: checking push gate"
+          }
+        ]
+      }
+    ]
+  }
+}
