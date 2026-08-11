@@ -22,3 +22,10 @@ export function evidenceLabel(path: string, line: number | null, endLine: number
   if (endLine && endLine > line) return `${path}:${line}-${endLine}`;
   return `${path}:${line}`;
 }
+
+/** Confidence meter color: <50% red, <80% orange, >=80% green. */
+export function confidenceColor(pct: number): string {
+  if (pct < 50) return "var(--crit)";
+  if (pct < 80) return "var(--warn)";
+  return "var(--ok)";
+}

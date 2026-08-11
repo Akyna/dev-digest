@@ -8,7 +8,7 @@ import React from "react";
 import { useTranslations } from "next-intl";
 import { Badge, Button, Icon, MonoLink, ProgressBar } from "@devdigest/ui";
 import type { ConventionCandidate } from "@/lib/hooks/conventions";
-import { conventionFileHref, evidenceLabel } from "./helpers";
+import { conventionFileHref, confidenceColor, evidenceLabel } from "./helpers";
 import { s } from "./styles";
 
 export function ConventionCard({
@@ -108,7 +108,7 @@ export function ConventionCard({
           <div style={s.confidenceRow}>
             <span style={s.confidenceLabel}>{t("card.confidence")}</span>
             <div style={s.confidenceBar}>
-              <ProgressBar value={pct} height={4} />
+              <ProgressBar value={pct} height={4} color={confidenceColor(pct)} />
             </div>
             <span style={s.confidencePct}>{pct}%</span>
           </div>
