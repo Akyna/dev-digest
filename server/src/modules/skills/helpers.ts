@@ -45,6 +45,33 @@ export function toSkillVersionDto(row: SkillVersionRow): SkillVersion {
   };
 }
 
+/**
+ * What the Stats tab shows. Deliberately narrow to what is actually tracked
+ * today — `skills.version` doubles as the version count (every content change
+ * bumps it AND snapshots it, so the two never diverge) and `agent_skills` is
+ * the only usage signal that exists. Pull frequency, accept rate and
+ * findings-by-category would need a `skill_id` on findings/reviews and event
+ * tracking that does not exist yet — out of scope here.
+ */
+export interface SkillStats {
+  skill_id: string;
+  versions: number;
+  agents_linked: number;
+  agents: Array<{ id: string; name: string }>;
+}
+
+export function toSkillStatsDto(
+  skill: SkillRow,
+  agents: Array<{ id: string; name: string }>,
+): SkillStats {
+  return {
+    skill_id: skill.id,
+    versions: skill.version,
+    agents_linked: agents.length,
+    agents,
+  };
+}
+
 /** Fields whose change bumps the skill's body version (anything but `enabled`). */
 export interface ContentChangePatch {
   name?: string;

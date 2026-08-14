@@ -24,6 +24,7 @@ const VersionParams = z.object({
  *   GET    /skills/:id/versions          → body history (newest first)
  *   GET    /skills/:id/versions/:version → one body snapshot
  *   POST   /skills/:id/restore/:version  → restore an old body as a NEW version
+ *   GET    /skills/:id/stats             → version count + linked agents (Stats tab)
  *   POST   /skills/import/preview        → parse a .md/.zip upload, persists nothing
  */
 
@@ -133,6 +134,13 @@ export default async function skillsRoutes(appBase: FastifyInstance) {
     const skill = await service.restoreVersion(workspaceId, req.params.id, req.params.version);
     if (!skill) throw new NotFoundError('Skill version not found');
     return skill;
+  });
+
+  app.get('/skills/:id/stats', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    const stats = await service.stats(workspaceId, req.params.id);
+    if (!stats) throw new NotFoundError('Skill not found');
+    return stats;
   });
 
   // A base64 archive does not fit the global 1MB bodyLimit from app.ts, so this

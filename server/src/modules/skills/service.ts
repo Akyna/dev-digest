@@ -9,7 +9,9 @@ import {
   parseSkillMarkdown,
   skillFileKind,
   toSkillDto,
+  toSkillStatsDto,
   toSkillVersionDto,
+  type SkillStats,
   type SkillVersion,
 } from './helpers.js';
 
@@ -157,6 +159,19 @@ export class SkillsService {
     const snapshot = await this.getVersion(workspaceId, id, version);
     if (!snapshot) return undefined;
     return this.update(workspaceId, id, { body: snapshot.body });
+  }
+
+  /**
+   * Stats for the skill's Stats tab: how many versions it has been through and
+   * which agents currently pull it into their prompt. Workspace-scoped like
+   * every other read here — undefined when the skill isn't in this workspace
+   * (the route maps that to 404).
+   */
+  async stats(workspaceId: string, id: string): Promise<SkillStats | undefined> {
+    const skill = await this.repo.getById(workspaceId, id);
+    if (!skill) return undefined;
+    const agents = await this.repo.linkedAgents(id);
+    return toSkillStatsDto(skill, agents);
   }
 
   /**

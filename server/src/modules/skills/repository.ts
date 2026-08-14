@@ -166,4 +166,21 @@ export class SkillsRepository {
       .where(and(eq(t.skillVersions.skillId, skillId), eq(t.skillVersions.version, version)));
     return row;
   }
+
+  // ---- stats -----------------------------------------------------------------
+
+  /** Agents that have this skill linked, for the skill's Stats tab. Cross-module
+      read symmetric to `AgentsRepository.linkedSkills` — the agents module reads
+      through `agent_skills` into `skills`, this reads through it the other way.
+      Not workspace-filtered: the caller already confirmed the skill is in this
+      workspace via `getById`, and a link can only ever point at an agent in the
+      same workspace as the skill (the agents module validates that on write). */
+  async linkedAgents(skillId: string): Promise<Array<{ id: string; name: string }>> {
+    return this.db
+      .select({ id: t.agents.id, name: t.agents.name })
+      .from(t.agentSkills)
+      .innerJoin(t.agents, eq(t.agents.id, t.agentSkills.agentId))
+      .where(eq(t.agentSkills.skillId, skillId))
+      .orderBy(asc(t.agents.name));
+  }
 }

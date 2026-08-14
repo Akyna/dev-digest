@@ -56,6 +56,19 @@ export function moveId(ids: string[], index: number, delta: number): string[] {
   return next;
 }
 
+/** Move `draggedId` to sit immediately before `targetId`. Backs drag-and-drop
+    reordering: it operates on the underlying id array (not the rendered,
+    possibly filtered, row list), so a drag still lands correctly while a
+    search filter is narrowing what's on screen. No-op for a self-drop or an
+    id no longer present (a stale drag surviving an unrelated re-render). */
+export function reorderIds(ids: string[], draggedId: string, targetId: string): string[] {
+  if (draggedId === targetId || !ids.includes(draggedId)) return ids;
+  const without = ids.filter((id) => id !== draggedId);
+  const targetIndex = without.indexOf(targetId);
+  if (targetIndex === -1) return ids;
+  return [...without.slice(0, targetIndex), draggedId, ...without.slice(targetIndex)];
+}
+
 /** Equal only if the ORDER matches too — order is half the payload here. */
 export function sameOrder(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((id, i) => id === b[i]);

@@ -91,6 +91,23 @@ export function useSkillVersions(id: string | null | undefined) {
   });
 }
 
+/** What the Stats tab shows — versions is `skill.version`, agents is who
+    currently pulls this skill into their prompt. */
+export interface SkillStats {
+  skill_id: string;
+  versions: number;
+  agents_linked: number;
+  agents: Array<{ id: string; name: string }>;
+}
+
+export function useSkillStats(id: string | null | undefined) {
+  return useQuery({
+    queryKey: ["skill-stats", id],
+    queryFn: () => api.get<SkillStats>(`/skills/${id}/stats`),
+    enabled: !!id,
+  });
+}
+
 /** Restoring an old body is a normal edit — it produces a NEW version, never
     rewrites history. */
 export function useRestoreSkillVersion() {

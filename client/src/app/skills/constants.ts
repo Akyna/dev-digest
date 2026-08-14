@@ -29,7 +29,13 @@ export interface SkillTab {
   placeholder?: boolean;
 }
 
-/** Tabs of the skill detail pane. `evals`/`stats` land in a later lesson.
+/** Tabs of the skill detail pane. `evals` lands in a later lesson — scoring a
+    skill against a fixture set needs an eval harness that doesn't exist yet.
+    `stats` is real: version count and linked-agents come straight off tables
+    this lesson already owns (`skills.version`, `agent_skills`). Pull
+    frequency / accept rate / findings-by-category would need a `skill_id` on
+    findings and usage-event tracking that don't exist — that part is still a
+    later lesson, scoped out of `StatsTab` itself rather than the whole tab.
     Shared: SkillDetail renders them, SkillsListView validates `?tab=` against
     them before it ever mounts SkillDetail. */
 export const TABS: readonly SkillTab[] = [
@@ -37,7 +43,7 @@ export const TABS: readonly SkillTab[] = [
   { key: "preview", labelKey: "detail.tabs.preview", icon: "Eye" },
   { key: "versions", labelKey: "detail.tabs.versions", icon: "History" },
   { key: "evals", labelKey: "detail.tabs.evals", icon: "FlaskConical", placeholder: true },
-  { key: "stats", labelKey: "detail.tabs.stats", icon: "BarChart", placeholder: true },
+  { key: "stats", labelKey: "detail.tabs.stats", icon: "BarChart" },
 ];
 
 /** Tab keys accepted from `?tab=`; anything else falls back to DEFAULT_TAB. */

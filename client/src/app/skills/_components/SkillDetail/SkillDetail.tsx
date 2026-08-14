@@ -8,6 +8,7 @@ import { Badge, EmptyState, Icon, Tabs } from "@devdigest/ui";
 import type { Skill } from "@devdigest/shared";
 import { ConfigTab } from "./_components/ConfigTab";
 import { PreviewTab } from "./_components/PreviewTab";
+import { StatsTab } from "./_components/StatsTab";
 import { VersionsTab } from "./_components/VersionsTab";
 import { DEFAULT_TAB, TABS } from "./constants";
 import { s } from "./styles";
@@ -44,6 +45,7 @@ export function SkillDetail({
         {active.key === "config" && <ConfigTab skill={skill} />}
         {active.key === "preview" && <PreviewTab skill={skill} />}
         {active.key === "versions" && <VersionsTab skill={skill} />}
+        {active.key === "stats" && <StatsTab skill={skill} />}
         {active.placeholder && (
           <EmptyState
             icon={active.icon}

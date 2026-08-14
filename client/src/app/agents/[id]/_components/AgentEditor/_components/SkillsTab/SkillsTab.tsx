@@ -12,7 +12,7 @@ import type { Agent, Skill } from "@devdigest/shared";
 import { useAgentSkills, useSetAgentSkills, useSkills } from "@/lib/hooks/skills";
 import { useToast } from "@/lib/toast";
 import { SKILLS_HREF, SKILL_TYPE_COLOR } from "./constants";
-import { linkedSkillIds, matchesFilter, moveId, sameOrder, splitSkills } from "./helpers";
+import { linkedSkillIds, matchesFilter, moveId, reorderIds, sameOrder, splitSkills } from "./helpers";
 import { s } from "./styles";
 
 export function SkillsTab({ agent }: { agent: Agent }) {
@@ -40,6 +40,10 @@ export function SkillsTab({ agent }: { agent: Agent }) {
   // request per arrow press would persist half-finished orderings.
   const [draft, setDraft] = React.useState<string[]>(saved);
   const [filter, setFilter] = React.useState("");
+  // Id of the row currently being dragged, or null. Reordering acts on the
+  // real `draft` array (see `reorderIds`), so a drag lands correctly even
+  // while `filter` is narrowing what rows are on screen.
+  const [dragId, setDragId] = React.useState<string | null>(null);
 
   // Re-sync when the server set changes — a different agent, or our own save
   // landing. React Query's structural sharing keeps `links` stable otherwise,
@@ -114,7 +118,34 @@ export function SkillsTab({ agent }: { agent: Agent }) {
     const isAttached = index !== null;
     const type = SKILL_TYPE_COLOR[skill.type];
     return (
-      <div key={skill.id} style={s.row(isAttached, !skill.enabled)}>
+      <div
+        key={skill.id}
+        data-testid={`skill-row-${skill.id}`}
+        style={s.row(isAttached, !skill.enabled, dragId === skill.id)}
+        draggable={isAttached}
+        onDragStart={(e) => {
+          setDragId(skill.id);
+          if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
+        }}
+        onDragOver={(e) => {
+          if (isAttached && dragId) e.preventDefault();
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          if (dragId) setDraft((d) => reorderIds(d, dragId, skill.id));
+          setDragId(null);
+        }}
+        onDragEnd={() => setDragId(null)}
+      >
+        {isAttached && (
+          <span
+            style={s.dragHandle}
+            title={t("skills.dragHandle")}
+            aria-label={t("skills.dragHandle")}
+          >
+            <Icon.ChevronsUpDown size={13} />
+          </span>
+        )}
         {isAttached && <span style={s.orderNum}>{index + 1}</span>}
         <Toggle
           on={isAttached}

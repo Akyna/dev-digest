@@ -410,6 +410,63 @@ d('/skills', () => {
     await app.close();
   });
 
+  it('GET /skills/:id/stats reports version count and linked agents', async () => {
+    const app = await makeApp();
+    const created = (
+      await app.inject({ method: 'POST', url: '/skills', payload: createBody })
+    ).json() as { id: string };
+
+    const fresh = await app.inject({ method: 'GET', url: `/skills/${created.id}/stats` });
+    expect(fresh.statusCode).toBe(200);
+    expect(fresh.json()).toEqual({
+      skill_id: created.id,
+      versions: 1,
+      agents_linked: 0,
+      agents: [],
+    });
+
+    // A content edit bumps the version count too — `skill.version` IS the
+    // version count, so this also locks in that the stats endpoint doesn't
+    // drift from `skill_versions`.
+    await app.inject({
+      method: 'PUT',
+      url: `/skills/${created.id}`,
+      payload: { body: '# no-console-log\n\nv2 body.\n' },
+    });
+
+    const agents = (await app.inject({ method: 'GET', url: '/agents' })).json() as Array<{
+      id: string;
+      name: string;
+    }>;
+    const a = agents.find((x) => x.name === 'Test Quality Reviewer')!;
+    const b = agents.find((x) => x.name === 'General Reviewer')!;
+    await app.inject({
+      method: 'POST',
+      url: `/agents/${a.id}/skills`,
+      payload: { skill_id: created.id },
+    });
+    await app.inject({
+      method: 'POST',
+      url: `/agents/${b.id}/skills`,
+      payload: { skill_id: created.id },
+    });
+
+    const after = await app.inject({ method: 'GET', url: `/skills/${created.id}/stats` });
+    expect(after.statusCode).toBe(200);
+    const stats = after.json();
+    expect(stats.versions).toBe(2);
+    expect(stats.agents_linked).toBe(2);
+    expect(stats.agents.map((x: { name: string }) => x.name)).toEqual(
+      ['General Reviewer', 'Test Quality Reviewer'].sort(),
+    );
+
+    const ghost = '00000000-0000-0000-0000-000000000000';
+    expect((await app.inject({ method: 'GET', url: `/skills/${ghost}/stats` })).statusCode).toBe(
+      404,
+    );
+    await app.close();
+  });
+
   it('skills are workspace-scoped', async () => {
     const app = await makeApp();
     const { db } = pg.handle;

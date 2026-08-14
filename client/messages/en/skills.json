@@ -47,10 +47,6 @@
       "evals": {
         "title": "Skill evals",
         "body": "Scoring a skill against a fixture set is coming in a later lesson."
-      },
-      "stats": {
-        "title": "Skill stats",
-        "body": "Usage and token-cost stats are coming in a later lesson."
       }
     }
   },
@@ -91,6 +87,18 @@
     "empty": {
       "title": "No history yet",
       "body": "Versions appear here once you save an edit."
+    }
+  },
+  "stats": {
+    "usedBy": "USED BY",
+    "agentsSuffix": "{count, plural, one {agent} other {agents}}",
+    "versionsLabel": "VERSIONS",
+    "agentsUsing": "Agents using this skill",
+    "open": "Open",
+    "loadError": "Could not load stats.",
+    "empty": {
+      "title": "Not used by any agent yet",
+      "body": "Attach this skill to an agent from the agent's Skills tab."
     }
   },
   "create": {

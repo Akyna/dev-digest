@@ -464,6 +464,16 @@ export async function seed(db: Db): Promise<{ workspaceId: string; userId: strin
       ],
     },
     { agent: 'General Reviewer', skills: ['api-contract-gate'] },
+    // Security Reviewer has no security-specific starter skill of its own yet
+    // (that would need a dedicated secrets/injection/SSRF rubric — future
+    // work), so it reuses the three existing ones whose checks are most
+    // security-relevant: validation-breaking API changes, untyped/unvalidated
+    // boundaries, and untested error/guard branches. Skills are many-to-many
+    // by design, so sharing them with other agents is expected.
+    {
+      agent: 'Security Reviewer',
+      skills: ['api-contract-gate', 'edge-case-checklist', 'branch-coverage-gate'],
+    },
   ];
   for (const link of skillLinks) {
     const [agentRow] = await db

@@ -128,6 +128,28 @@ describe("SkillsTab", () => {
     expect(mutate.mock.calls[0]![0]).toEqual({ agentId: "ag1", skillIds: ["s1", "s3"] });
   });
 
+  it("reorders via drag-and-drop and persists the new order", () => {
+    const { container } = renderTab();
+    const alpha = container.querySelector('[data-testid="skill-row-s1"]')!;
+    const gamma = container.querySelector('[data-testid="skill-row-s3"]')!;
+
+    // Draft starts as [s3, s1] (Gamma order=0, Alpha order=1). Dragging Alpha
+    // and dropping it on Gamma moves it to sit right before Gamma.
+    fireEvent.dragStart(alpha, { dataTransfer: {} });
+    fireEvent.dragOver(gamma, { dataTransfer: {} });
+    fireEvent.drop(gamma, { dataTransfer: {} });
+
+    expect(posOf("Alpha Rubric")).toBeLessThan(posOf("Gamma Security"));
+    fireEvent.click(screen.getByRole("button", { name: "Save skills" }));
+    expect(mutate.mock.calls[0]![0]).toEqual({ agentId: "ag1", skillIds: ["s1", "s3"] });
+  });
+
+  it("does not make an available (detached) row draggable", () => {
+    const { container } = renderTab();
+    const beta = container.querySelector('[data-testid="skill-row-s2"]')!;
+    expect(beta).toHaveAttribute("draggable", "false");
+  });
+
   it("filters rows without changing the underlying order", () => {
     renderTab();
     fireEvent.change(screen.getByLabelText("Filter skills…"), { target: { value: "beta" } });

@@ -63,7 +63,7 @@ export const s = {
   } satisfies CSSProperties,
   list: { display: "flex", flexDirection: "column", gap: 6 } satisfies CSSProperties,
 
-  row: (attached: boolean, globallyOff: boolean): CSSProperties => ({
+  row: (attached: boolean, globallyOff: boolean, dragging = false): CSSProperties => ({
     display: "flex",
     alignItems: "center",
     gap: 12,
@@ -73,8 +73,15 @@ export const s = {
     background: attached ? "var(--bg-elevated)" : "transparent",
     // A globally disabled skill is dimmed even when attached: attaching it
     // changes nothing in the prompt until it is re-enabled.
-    opacity: globallyOff ? 0.62 : 1,
+    opacity: dragging ? 0.4 : globallyOff ? 0.62 : 1,
   }),
+  dragHandle: {
+    display: "inline-flex",
+    alignItems: "center",
+    flexShrink: 0,
+    color: "var(--text-muted)",
+    cursor: "grab",
+  } satisfies CSSProperties,
   orderNum: {
     width: 20,
     textAlign: "right",
