@@ -5,23 +5,18 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { Button, Icon, Modal } from "@devdigest/ui";
-import { s } from "../../styles";
+import { approxTokens } from "@/lib/tokens";
+import { s as drawer } from "../../styles";
 import { PromptModalBody } from "../PromptModalBody";
-
-const miniBtnStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: 4,
-  borderRadius: 5,
-  border: "1px solid var(--border)",
-  background: "var(--bg-elevated)",
-  color: "var(--text-muted)",
-  cursor: "pointer",
-};
+import { s } from "./styles";
 
 export function PromptBlock({ label, text, color }: { label: string; text: string; color: string }) {
   const t = useTranslations("runs");
+  // Presentation-only: the trace contract carries whole-run tokens_in/out, never
+  // per-block counts, so this is estimated from the text we already have. Always
+  // rendered with "≈" — it is what makes an expensive block (skills, repo map)
+  // visible without pretending to be the billed number.
+  const tokens = approxTokens(text);
   const [open, setOpen] = React.useState(false);
   const [full, setFull] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
@@ -31,11 +26,14 @@ export function PromptBlock({ label, text, color }: { label: string; text: strin
     setTimeout(() => setCopied(false), 1200);
   };
   return (
-    <div style={s.promptRow}>
-      <div onClick={() => setOpen((o) => !o)} style={s.promptHead}>
-        <span style={s.promptDot(color)} />
-        <span style={s.promptLabel}>{label}</span>
-        <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+    <div style={drawer.promptRow}>
+      <div onClick={() => setOpen((o) => !o)} style={drawer.promptHead}>
+        <span style={drawer.promptDot(color)} />
+        <span style={drawer.promptLabel}>{label}</span>
+        <span style={s.actions}>
+          <span style={s.tokens} title={t("trace.prompt.tokensHint")}>
+            {t("trace.prompt.tokens", { count: tokens })}
+          </span>
           <button
             type="button"
             title={t("trace.prompt.copy")}
@@ -44,7 +42,7 @@ export function PromptBlock({ label, text, color }: { label: string; text: strin
               e.stopPropagation();
               copy();
             }}
-            style={miniBtnStyle}
+            style={s.miniBtn}
           >
             {copied ? <Icon.Check size={12} /> : <Icon.Copy size={12} />}
           </button>
@@ -56,7 +54,7 @@ export function PromptBlock({ label, text, color }: { label: string; text: strin
               e.stopPropagation();
               setFull(true);
             }}
-            style={miniBtnStyle}
+            style={s.miniBtn}
           >
             <Icon.ExternalLink size={12} />
           </button>
@@ -66,7 +64,7 @@ export function PromptBlock({ label, text, color }: { label: string; text: strin
         </span>
       </div>
       {open && (
-        <pre className="mono" style={s.promptPre}>
+        <pre className="mono" style={drawer.promptPre}>
           {text || "—"}
         </pre>
       )}

@@ -25,6 +25,12 @@ reviews, repo-intel, polling, workspace, settings) · `src/adapters/` — LLM/
 GitHub/git/ast-grep/codeindex/embedder behind `platform/container.ts` (DI) ·
 `src/platform/` — config, jobs, SSE, prompts, resilience (cross-cutting).
 
+Layering inside a module is `routes.ts → service.ts → repository.ts`, imports
+pointing inward only — routes never build SQL, services never import Fastify,
+row types stop at the repository. `repos/` is the reference; `pulls`,
+`polling`, `settings`, `workspace` predate the rule and are the known
+exceptions. Full rules: `.claude/skills/onion-architecture/SKILL.md`.
+
 ## Non-default conventions
 
 - No keys required to boot — every secret optional in `platform/config.ts`; can be set at runtime via the Settings UI.

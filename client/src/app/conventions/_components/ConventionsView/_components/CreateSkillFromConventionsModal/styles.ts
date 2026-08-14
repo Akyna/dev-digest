@@ -1,0 +1,35 @@
+import type { CSSProperties } from "react";
+
+export const s = {
+  body: { padding: 24 } satisfies CSSProperties,
+  banner: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 10,
+    padding: "12px 14px",
+    borderRadius: 8,
+    background: "var(--accent-bg, rgba(99,102,241,.12))",
+    border: "1px solid var(--accent)",
+    fontSize: 13,
+    color: "var(--text-secondary)",
+    lineHeight: 1.5,
+    marginBottom: 20,
+  } satisfies CSSProperties,
+  bannerIcon: { color: "var(--accent)", flexShrink: 0, marginTop: 1 } satisfies CSSProperties,
+  bannerLink: { color: "var(--accent)", fontWeight: 600 } satisfies CSSProperties,
+  row: { display: "flex", gap: 16 } satisfies CSSProperties,
+  rowField: { flex: 1 } satisfies CSSProperties,
+  footer: { display: "flex", justifyContent: "flex-end", gap: 10 } satisfies CSSProperties,
+  tokens: { fontSize: 12, color: "var(--text-muted)" } satisfies CSSProperties,
+  agentList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+    maxHeight: 160,
+    overflow: "auto",
+    border: "1px solid var(--border)",
+    borderRadius: 8,
+    padding: 10,
+  } satisfies CSSProperties,
+  agentEmpty: { fontSize: 12, color: "var(--text-muted)" } satisfies CSSProperties,
+} as const;

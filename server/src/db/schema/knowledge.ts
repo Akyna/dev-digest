@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, jsonb, timestamp, doublePrecision, boolean, vector, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, jsonb, timestamp, doublePrecision, boolean, integer, vector, index } from 'drizzle-orm/pg-core';
 import { now } from './_shared';
 import { workspaces } from './core';
 import { repos } from './repos';
@@ -35,8 +35,21 @@ export const conventions = pgTable('conventions', {
     .references(() => workspaces.id, { onDelete: 'cascade' }),
   repoId: uuid('repo_id').references(() => repos.id, { onDelete: 'cascade' }),
   rule: text('rule').notNull(),
+  category: text('category'),
   evidencePath: text('evidence_path'),
   evidenceSnippet: text('evidence_snippet'),
+  evidenceLine: integer('evidence_line'),
+  evidenceEndLine: integer('evidence_end_line'),
   confidence: doublePrecision('confidence'),
+  // Legacy boolean, kept for the vendored ConventionCandidate contract — written
+  // in sync with `status === 'accepted'`. `status` is the source of truth since
+  // it also models 'rejected' (a bare boolean can't).
   accepted: boolean('accepted').notNull().default(false),
+  status: text('status', { enum: ['pending', 'accepted', 'rejected'] })
+    .notNull()
+    .default('pending'),
+  supportCount: integer('support_count').notNull().default(1),
+  edited: boolean('edited').notNull().default(false),
+  createdAt: now(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });

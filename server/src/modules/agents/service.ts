@@ -142,6 +142,17 @@ export class AgentsService {
   }
 
   /**
+   * Linked-skill count for every agent in the workspace, as `{ [agentId]: n }`.
+   *
+   * Deliberately a sidecar map rather than a field on the `Agent` DTO: `Agent`
+   * lives in the vendored shared contracts, which are edited upstream, not here.
+   */
+  async skillCounts(workspaceId: string): Promise<Record<string, number>> {
+    const rows = await this.repo.skillCounts(workspaceId);
+    return Object.fromEntries(rows.map((r) => [r.agentId, r.count]));
+  }
+
+  /**
    * Set / reorder the agent's linked skills. If `skillIds` is provided, replaces
    * the whole set in that order. Returns the resulting ordered links.
    */
@@ -152,7 +163,19 @@ export class AgentsService {
   ): Promise<AgentSkillLink[] | undefined> {
     const agent = await this.repo.getById(workspaceId, agentId);
     if (!agent) return undefined;
-    await this.repo.setSkills(agentId, skillIds);
+    // `skill_ids` is caller-supplied and only shape-validated (an array of
+    // uuids), so sanitise before it reaches the destructive replace:
+    //   - dedupe, or the repeated id violates the (agent_id, skill_id) PK;
+    //   - drop ids that aren't skills in THIS workspace, which would otherwise
+    //     either violate the FK or splice another workspace's skill body into
+    //     this agent's prompt.
+    // First occurrence wins, because array order IS the prompt block order.
+    const deduped = [...new Set(skillIds)];
+    const valid = await this.repo.existingSkillIds(workspaceId, deduped);
+    await this.repo.setSkills(
+      agentId,
+      deduped.filter((id) => valid.has(id)),
+    );
     return this.skillLinks(agentId);
   }
 

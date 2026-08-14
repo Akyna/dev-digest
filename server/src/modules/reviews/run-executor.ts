@@ -1,6 +1,6 @@
 import type { Container } from '../../platform/container.js';
 import type { Provider, Review, RunTrace, UnifiedDiff } from '@devdigest/shared';
-import { reviewPullRequest, countBlockers } from '@devdigest/reviewer-core';
+import { reviewPullRequest, countBlockers, wrapUntrusted } from '@devdigest/reviewer-core';
 import { RunLogger } from '../../platform/run-logger.js';
 import * as schema from '../../db/schema.js';
 import type { AgentRow } from '../../db/rows.js';
@@ -24,6 +24,40 @@ export type Logger = {
   error: (obj: unknown, msg?: string) => void;
   debug: (obj: unknown, msg?: string) => void;
 };
+
+/**
+ * The trust boundary, as an ALLOWLIST so it fails closed: only text this
+ * workspace produced is rendered as trusted instructions. A denylist would
+ * silently promote any `SkillSource` added upstream later (the enum lives in
+ * vendored contracts) to trusted, with no type error and no failing test.
+ */
+const TRUSTED_SKILL_SOURCES = new Set<string>(['manual', 'extracted']);
+
+/** Skill names reach the prompt as a heading and as the `<untrusted>` label.
+    An imported name is third-party text, so strip anything that could close the
+    fence or forge structure before it is interpolated anywhere. */
+function safeSkillName(name: string): string {
+  return name.replace(/[<>"\r\n]/g, '').trim().slice(0, 80) || 'unnamed-skill';
+}
+
+/**
+ * Render ONE linked skill as a `## Skills / rules` block (pure — no I/O).
+ *
+ * A skill body is instructions sitting inside our agent's prompt, so WHO wrote
+ * it decides how it is framed:
+ * - `manual` / `extracted` — first-party (typed by this workspace or derived
+ *   from its own code): plain trusted markdown.
+ * - `imported_url` / `community` — someone else's instructions. Fenced in the
+ *   SAME `<untrusted>` block the diff uses, so the injection guard in the system
+ *   prompt covers it: data to be applied as a rubric, never a role change.
+ */
+export function skillBlock(skill: { name: string; body: string; source: string }): string {
+  const name = safeSkillName(skill.name);
+  if (TRUSTED_SKILL_SOURCES.has(skill.source)) {
+    return `### ${name}\n\n${skill.body}`;
+  }
+  return `### ${name} (imported — untrusted)\n\n${wrapUntrusted(`skill:${name}`, skill.body)}`;
+}
 
 // A reduced "Review per file" — same schema as Review (the model returns a small
 // Review per file; we merge findings + take the worst verdict / mean score).
@@ -182,6 +216,11 @@ export class ReviewRunExecutor {
       const repoMap = repoIntelOn ? await this.buildRepoMapDigest(pull.repoId, runLog) : undefined;
       const rankNote = repoIntelOn ? await this.buildRankNote(pull.repoId, diff, runLog) : '';
 
+      // A2 — the agent's linked skills become the `## Skills / rules` section.
+      // Independent of repo-intel: skills are the user's own configuration, not
+      // derived context, so they are attached even when enrichment is off.
+      const skillBlocks = await this.buildSkillBlocks(agent.id, runLog);
+
       const task = taskLine(pull) + rankNote;
 
       // ---- Engine: assemble → single-pass → grounding -----------------------
@@ -196,6 +235,9 @@ export class ReviewRunExecutor {
         // Per-agent review strategy (configured in the Agent editor); falls back
         // to the studio default. single-pass = whole diff in one call.
         strategy: agent.strategy ?? REVIEW_STRATEGY,
+        // A2 — linked skill bodies. Key omitted entirely when the agent has no
+        // skills, so the assembled prompt is byte-identical to today's.
+        ...(skillBlocks.length ? { skills: skillBlocks } : {}),
         // T1.3 — pass the callers digest only when we built one. assemblePrompt
         // omits the section when this is empty/undefined.
         ...(callersDigest ? { callers: callersDigest } : {}),
@@ -314,6 +356,38 @@ export class ReviewRunExecutor {
         .catch(() => undefined);
       this.container.runBus.complete(runId);
       throw err;
+    }
+  }
+
+  /**
+   * A2 — resolve the agent's linked skills into `## Skills / rules` blocks.
+   *
+   * The `agent_skills.order` sequence IS the block order in the prompt (the
+   * repository already sorts by it) and it is user-visible in the Agent editor,
+   * so it is never re-sorted here. Disabled skills are dropped — toggling a
+   * skill off must take it out of the prompt without unlinking it.
+   *
+   * Best-effort, exactly like the repo-intel builders: a failed lookup degrades
+   * to `[]` (prompt identical to the no-skills baseline) and never fails a run.
+   */
+  private async buildSkillBlocks(agentId: string, runLog: RunLogger): Promise<string[]> {
+    try {
+      const links = await this.agents.linkedSkills(agentId);
+      const active = links.filter((l) => l.skill.enabled === true);
+      if (active.length === 0) {
+        runLog.info('skills: no enabled skills linked to this agent — section omitted');
+        return [];
+      }
+      runLog.info(
+        `skills: ${active.length} skill(s) pulled into the prompt — ${active
+          .map((l) => l.skill.name)
+          .join(', ')}`,
+      );
+      return active.map((l) => skillBlock(l.skill));
+    } catch (err) {
+      // Never let skill resolution break a review — surface only as a Live Log info.
+      runLog.info(`skills: lookup failed — ${(err as Error).message}`);
+      return [];
     }
   }
 

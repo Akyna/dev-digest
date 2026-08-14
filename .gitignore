@@ -16,7 +16,7 @@ coverage/
 .turbo/
 .pnpm-store/
 *.log
-.devdigest/cache/
+.devdigest/
 clones/
 playwright-report/
 test-results/

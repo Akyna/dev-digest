@@ -45,6 +45,13 @@ for dir in server client; do
   fi
 done
 
+# --- git hooks -----------------------------------------------------------------
+# pr-self-review's pre-push gate lives in .githooks/ (committed, unlike .git/hooks/).
+[ "$(git config --get core.hooksPath || true)" = ".githooks" ] || {
+  log "wiring up .githooks (pr-self-review pre-push gate)"
+  git config core.hooksPath .githooks
+}
+
 # --- Postgres ----------------------------------------------------------------
 # The container name is fixed (container_name: devdigest-postgres), so if one is
 # already running (possibly under another compose project) we reuse it instead

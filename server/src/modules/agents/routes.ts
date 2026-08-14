@@ -76,6 +76,13 @@ export default async function agentsRoutes(appBase: FastifyInstance) {
     return service.list(workspaceId);
   });
 
+  // Declared before `/agents/:id` for readability only — Fastify's router always
+  // prefers a static segment over a parametric one, so the order is not load-bearing.
+  app.get('/agents/skill-counts', async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    return service.skillCounts(workspaceId);
+  });
+
   app.get('/agents/:id', { schema: { params: IdParams } }, async (req) => {
     const { workspaceId } = await getContext(app.container, req);
     const agent = await service.get(workspaceId, req.params.id);

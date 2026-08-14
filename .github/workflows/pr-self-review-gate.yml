@@ -1,0 +1,141 @@
+# pr-self-review's deterministic invariants, re-run in CI as a PR annotation check.
+# Observe-only for now (see docs/pr-self-review-plan.md §8 #11, §6 Layer 2b): comments on
+# unwaived CRITICAL invariant hits, does NOT block merge. Promote to a required
+# branch-protection check only after a trial period shows no false positives.
+#
+# No model call, no rubric lanes — just the shell checks in
+# .claude/skills/pr-self-review/invariants.md plus a waiver-file lookup. That keeps this
+# workflow fast and free of LLM cost/flakiness, unlike the full multi-lane review, which
+# stays a local/interactive tool run via /pr-self-review.
+name: pr-self-review-gate
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: pr-self-review-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  invariants:
+    name: deterministic invariants (observe-only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: run invariant checks
+        id: invariants
+        run: |
+          BASE="${{ github.event.pull_request.base.sha }}"
+          # Array, not a string — findings.txt is built with `printf '%s\n'` below, which
+          # never interprets escapes in its arguments. A string built with `printf '%b'`
+          # would let a crafted filename containing a `\c` sequence truncate the file and
+          # silently drop every finding appended after it.
+          FINDINGS=()
+
+          # INV-1: applied migrations are append-only
+          if git diff --name-status "$BASE" -- server/src/db/migrations/ | grep -qE '^[MD]'; then
+            FINDINGS+=("- 🔴 INV-1: a migration under \`server/src/db/migrations/\` was modified or deleted — create a new migration instead.")
+          fi
+
+          # INV-2: vendored do-not-touch paths
+          if git diff --name-status "$BASE" -- server/src/vendor/shared client/src/vendor | grep -q .; then
+            FINDINGS+=("- 🔴 INV-2: a vendored do-not-touch path changed (\`server/src/vendor/shared\` / \`client/src/vendor\`) — edit at the upstream source.")
+          fi
+
+          # INV-3: schema change with no new migration
+          if git diff --name-status "$BASE" -- server/src/db/schema server/src/db/schema.ts | grep -q . \
+             && ! git diff --name-status "$BASE" -- server/src/db/migrations/ | grep -qE '^A'; then
+            FINDINGS+=("- 🔴 INV-3: schema changed with no new migration in this diff — run \`pnpm db:generate\`.")
+          fi
+
+          # INV-4: possible secrets — a forced-in .env file, or a secret-shaped literal
+          # added anywhere in the diff (matches invariants.md's INV-4 in full; this used
+          # to only check the .env filename half).
+          if git diff --name-status "$BASE" | grep -E '\.env($|\.[a-z]+$)' | grep -v '\.env\.example' | grep -q .; then
+            FINDINGS+=("- 🔴 INV-4: a \`.env*\` file was added — secrets belong in \`~/.devdigest/secrets.json\`, never committed.")
+          fi
+          if git diff "$BASE" -- | grep -E '^\+' | grep -vE '^\+\+\+' \
+             | grep -qE "sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{30,}|AKIA[A-Z0-9]{16}|[A-Za-z_][A-Za-z0-9_]*(KEY|SECRET|TOKEN)[A-Za-z0-9_]*[[:space:]]*[:=][[:space:]]*[\'\"]?[A-Za-z0-9+/_=-]{32,}"; then
+            FINDINGS+=("- 🔴 INV-4: an added line looks like a secret literal (API key / token pattern) — move it out of the diff and into \`~/.devdigest/secrets.json\` or a secret manager.")
+          fi
+
+          # INV-5: server/package.json is skip-worktree
+          if git diff --name-status "$BASE" -- server/package.json | grep -q .; then
+            FINDINGS+=("- 🟡 INV-5: \`server/package.json\` changed — it's skip-worktree; check for a local-only change leaking in.")
+          fi
+
+          # INV-6: e2e specs must stay deterministic. Real shape is
+          # {"cmd": ["<verb>", ...], "label": "..."} (see e2e/specs/*.flow.json) — not a
+          # "command"/"locator" object key. Only "open"/"wait"/"find" are in use; the AI
+          # `chat` verb must never appear as a step's cmd[0].
+          for f in $(git diff --name-only "$BASE" -- 'e2e/specs/*.flow.json'); do
+            if grep -qE '"cmd"[[:space:]]*:[[:space:]]*\[[[:space:]]*"chat"' "$f" 2>/dev/null; then
+              FINDINGS+=("- 🟡 INV-6: \`$f\` uses the AI \`chat\` command — e2e specs must stay deterministic.")
+            fi
+          done
+
+          # INV-7: DB-backed test importing test/helpers/pg.ts must be named *.it.test.ts
+          for f in $(git diff --name-only "$BASE" -- 'server/**/*.test.ts'); do
+            case "$f" in *.it.test.ts) continue ;; esac
+            if git diff "$BASE" -- "$f" | grep -qE "^\+.*test/helpers/pg(\.ts|\.js)?['\"]"; then
+              FINDINGS+=("- 🔴 INV-7: \`$f\` imports \`test/helpers/pg.ts\` but isn't named \`*.it.test.ts\` — it will run in the wrong (hermetic) lane.")
+            fi
+          done
+
+          # INV-8: a genuinely new reviewer-core/vendor-shared cross-package import, with
+          # no `paths:` update in any workflow. A relative import inside the package
+          # itself never matches `from '...reviewer-core...'`, so internal refactors
+          # don't false-positive; requiring the literal `paths:` (not just "some workflow
+          # file touched") avoids an unrelated one-line workflow edit hiding a real gap.
+          if git diff "$BASE" -- | grep -E '^\+' | grep -vE '^\+\+\+' \
+             | grep -qE "from ['\"].*\.?/?(reviewer-core|vendor/shared)" \
+             && ! (git diff "$BASE" -- '.github/workflows/*.yml' | grep -E '^\+' | grep -q 'paths:'); then
+            FINDINGS+=("- 🟡 INV-8: a new cross-package import of \`reviewer-core\`/\`vendor/shared\` was added with no \`paths:\` update in \`.github/workflows/*.yml\` — confirm the consuming workflow still runs for this change.")
+          fi
+
+          # INV-9: new skill added without updating routing.md / skills README
+          if git diff --name-status "$BASE" --diff-filter=A -- '.claude/skills/*/SKILL.md' | grep -q . \
+             && ! git diff --name-status "$BASE" -- .claude/skills/pr-self-review/routing.md .claude/skills/README.md | grep -q .; then
+            FINDINGS+=("- 🟡 INV-9: a new skill was added without updating \`routing.md\` / \`.claude/skills/README.md\`.")
+          fi
+
+          # INV-10: new client catch-all folder
+          if git diff --name-status "$BASE" --diff-filter=A -- 'client/src/**/utils.ts' 'client/src/constants/**' 'client/src/utils/**' | grep -q .; then
+            FINDINGS+=("- 🟡 INV-10: a new catch-all \`utils\`/\`constants\` path was added — \`react-architecture\` forbids these; place code at the narrowest scope.")
+          fi
+
+          if [ "${#FINDINGS[@]}" -gt 0 ]; then
+            printf '%s\n' "${FINDINGS[@]}" > findings.txt
+          else
+            : > findings.txt
+          fi
+          echo "has_critical=$(grep -qF '🔴' findings.txt && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: check waivers
+        id: waivers
+        run: |
+          if [ -f .pr-self-review-ignore.json ]; then
+            echo "waivers file present — unwaived findings only are reported below (manual cross-check for now; full waiver matching runs in the interactive skill)"
+          fi
+
+      - name: comment findings
+        if: steps.invariants.outputs.has_critical == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('findings.txt', 'utf8').trim();
+            if (!body) return;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## pr-self-review — deterministic invariants (observe-only)\n\n${body}\n\n_This check does not block merge yet. See \`docs/pr-self-review-plan.md\` §8 #11._`,
+            });

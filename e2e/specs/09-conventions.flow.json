@@ -1,0 +1,12 @@
+{
+  "name": "Conventions page renders seeded candidates with their evidence and status",
+  "description": "Loads /conventions for the auto-selected repo, confirms the seeded accepted/pending conventions render with rule text + file:line evidence, and that the accepted candidate shows as Accepted. Read-only: extraction itself is an LLM call and is not exercised here.",
+  "steps": [
+    { "cmd": ["open", "{BASE}/conventions"], "label": "load the conventions page" },
+    { "cmd": ["wait", "--url", "/conventions"], "label": "conventions route reached" },
+    { "cmd": ["wait", "--load", "networkidle"], "label": "conventions fetch settles" },
+    { "cmd": ["wait", "--text", "Always put rate-limiter middleware under src/middleware/"], "label": "seeded convention is visible" },
+    { "cmd": ["wait", "--text", "src/middleware/ratelimit.ts:1"], "label": "evidence file:line is rendered" },
+    { "cmd": ["wait", "--text", "Always validate the request body with Zod"], "label": "second seeded convention is visible" }
+  ]
+}

@@ -9,18 +9,57 @@
     "rescan": "Re-scan",
     "runExtraction": "Run extraction",
     "extractionFailed": "Extraction failed",
+    "scanDoneToast": "{count} conventions verified · {dropped} dropped",
     "loadError": "Could not load conventions.",
+    "noRepo": {
+      "title": "No repo selected",
+      "body": "Add and clone a repository, then come back to scan it for conventions."
+    },
     "empty": {
       "title": "No conventions extracted yet",
       "body": "Scan the repo to surface house-rules — naming, error handling, structure — each backed by evidence you can turn into a Skill.",
       "cta": "Run extraction"
     },
-    "candidateCount": "{count, plural, one {# candidate} other {# candidates}} · grounded against sampled files"
+    "acceptedOfTotal": "{accepted} of {total} accepted",
+    "lastScan": "Last scan: {date}",
+    "acceptAllPending": "Accept all pending ({count})",
+    "createSkill": "Create skill ({count})"
   },
   "card": {
     "confidence": "Confidence",
     "accepted": "Accepted",
-    "accepting": "Accepting…",
-    "acceptAsSkill": "Accept as Skill"
+    "accept": "Accept",
+    "reject": "Reject",
+    "edit": "Edit",
+    "edited": "edited",
+    "saveEdit": "Save",
+    "cancelEdit": "Cancel",
+    "supportedBy": "seen in {count} places",
+    "github": "GitHub"
+  },
+  "modal": {
+    "title": "Create skill from conventions",
+    "draftError": "Could not build a draft from the selected conventions.",
+    "createdToast": "Skill \"{name}\" created",
+    "cancel": "Cancel",
+    "create": "Create skill",
+    "creating": "Creating…",
+    "banner": {
+      "mergedFrom": "Merged from {count, plural, one {# accepted convention} other {# accepted conventions}} in",
+      "editable": "Everything below is editable before you save."
+    },
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "e.g. payments-api-conventions",
+      "description": "Description",
+      "type": "Type",
+      "enabled": "Enabled",
+      "enabledHint": "Whether this block is added to agents' prompts.",
+      "body": "Skill body",
+      "tokens": "≈{count} tokens",
+      "agents": "Link to agents",
+      "agentsHint": "Agents checked here will pull this skill into their review prompt immediately.",
+      "noAgents": "No agents yet — create one under Agents first."
+    }
   }
 }
