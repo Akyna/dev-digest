@@ -196,4 +196,68 @@ d('/repos/:id/conventions', () => {
     expect(links.map((l) => l.agentId)).toContain(agentId);
     await app.close();
   });
+
+  // Regression: the seeded demo repo has `clonePath: null` (no real git clone
+  // in this offline demo data), which used to 422 every read here — `list`,
+  // `skill-draft`, `skill` all required a finished clone even though they only
+  // ever touch already-verified DB rows, never the working tree. Only
+  // `extract` genuinely needs the clone (it samples real files).
+  it('reads already-verified conventions for a repo that has not finished cloning', async () => {
+    const app = await makeApp();
+    const [repo] = await pg.handle.db
+      .insert(t.repos)
+      .values({
+        workspaceId,
+        owner: 'acme',
+        name: 'uncloned-repo',
+        fullName: `acme/uncloned-repo-${Date.now()}`,
+        clonePath: null,
+      })
+      .returning();
+    const repoId = repo!.id as string;
+
+    const [row] = await pg.handle.db
+      .insert(t.conventions)
+      .values({
+        workspaceId,
+        repoId,
+        rule: 'Always do the thing.',
+        category: 'structure',
+        evidencePath: 'src/thing.ts',
+        evidenceSnippet: 'const thing = true;',
+        evidenceLine: 1,
+        confidence: 1,
+        status: 'accepted',
+        accepted: true,
+      })
+      .returning();
+
+    const list = await app.inject({ method: 'GET', url: `/repos/${repoId}/conventions` });
+    expect(list.statusCode).toBe(200);
+    expect(list.json().candidates.map((c: { id: string }) => c.id)).toContain(row!.id);
+
+    const draft = await app.inject({
+      method: 'POST',
+      url: `/repos/${repoId}/conventions/skill-draft`,
+      payload: { convention_ids: [row!.id] },
+    });
+    expect(draft.statusCode).toBe(200);
+
+    const created = await app.inject({
+      method: 'POST',
+      url: `/repos/${repoId}/conventions/skill`,
+      payload: {
+        convention_ids: [row!.id],
+        name: 'Uncloned Conventions',
+        type: 'convention',
+        body: draft.json().body,
+      },
+    });
+    expect(created.statusCode).toBe(201);
+
+    // extract is the one path that genuinely needs the clone — it still 422s.
+    const extract = await app.inject({ method: 'POST', url: `/repos/${repoId}/conventions/extract` });
+    expect(extract.statusCode).toBe(422);
+    await app.close();
+  });
 });

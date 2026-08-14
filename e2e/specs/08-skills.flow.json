@@ -8,7 +8,7 @@
     { "cmd": ["wait", "--text", "branch-coverage-gate"], "label": "seeded skill card is visible" },
     { "cmd": ["find", "text", "branch-coverage-gate", "click"], "label": "select the skill" },
     { "cmd": ["wait", "--url", "skill="], "label": "selection is reflected in the URL" },
-    { "cmd": ["find", "text", "Preview", "click"], "label": "switch to the Preview tab" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Preview"], "label": "switch to the Preview tab" },
     { "cmd": ["wait", "--url", "tab=preview"], "label": "preview tab is active" }
   ]
 }

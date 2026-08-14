@@ -73,7 +73,11 @@ export class ConventionsService {
     this.repo = new ConventionsRepository(container.db);
   }
 
-  private async repoRef(workspaceId: string, repoId: string) {
+  /** Repo lookup with no clone requirement — every read path here (list,
+      skill draft, skill create) only touches already-verified DB rows, never
+      the working tree, so a repo that hasn't finished cloning yet still has
+      readable conventions once it has been scanned in the past. */
+  private async repoRow(workspaceId: string, repoId: string) {
     const [row] = await this.container.db
       .select({
         id: t.repos.id,
@@ -84,12 +88,20 @@ export class ConventionsService {
       .from(t.repos)
       .where(and(eq(t.repos.workspaceId, workspaceId), eq(t.repos.id, repoId)));
     if (!row) throw new NotFoundError('Repo not found');
+    return row;
+  }
+
+  /** Same lookup, but only for paths that read the working tree (`extract`
+      samples real files off disk) — those genuinely cannot proceed without a
+      finished clone. */
+  private async repoRef(workspaceId: string, repoId: string) {
+    const row = await this.repoRow(workspaceId, repoId);
     if (!row.clonePath) throw new ValidationError('Repo has not finished cloning yet');
     return row;
   }
 
   async list(workspaceId: string, repoId: string): Promise<{ candidates: ConventionCandidate[]; last_scan_at: string | null }> {
-    await this.repoRef(workspaceId, repoId);
+    await this.repoRow(workspaceId, repoId);
     const rows = await this.repo.list(workspaceId, repoId);
     const lastScan = await this.repo.lastScanAt(workspaceId, repoId);
     return {
@@ -193,7 +205,7 @@ export class ConventionsService {
   }
 
   async skillDraft(workspaceId: string, repoId: string, input: SkillDraftInput): Promise<SkillDraft> {
-    const repo = await this.repoRef(workspaceId, repoId);
+    const repo = await this.repoRow(workspaceId, repoId);
     const rows = await this.acceptedRows(workspaceId, input.convention_ids);
     return {
       name: suggestSkillName(repo.name),
@@ -209,7 +221,7 @@ export class ConventionsService {
    * agents module's own dedupe/order/validation rather than duplicating it.
    */
   async createSkill(workspaceId: string, repoId: string, input: CreateSkillFromConventionsInput) {
-    await this.repoRef(workspaceId, repoId);
+    await this.repoRow(workspaceId, repoId);
     const rows = await this.acceptedRows(workspaceId, input.convention_ids);
     const evidenceFiles = [...new Set(rows.map((r) => r.evidencePath).filter((p): p is string => !!p))];
 
